@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <title>Manajemen Member & Pembayaran</title>
+  <title>Manajemen Member & Pembayaran — Firebase</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <style>
@@ -35,9 +35,9 @@
   </style>
 </head>
 <body>
-  <h2>📋 Sistem Member & Pembayaran</h2>
+  <h2>📋 Sistem Member & Pembayaran (Firestore)</h2>
 
-  <!-- LOGIN -->
+  <!-- LOGIN (UI saja; bukan Firebase Auth) -->
   <div id="loginBox" class="no-print">
     <h3>Login</h3>
     <label>Username <input type="text" id="username"></label>
@@ -56,7 +56,6 @@
     <div id="tab-member" class="adminOnly">
       <h3>Database Member</h3>
       <form id="memberForm">
-        <input type="hidden" id="editIndexMember" />
         <label>ID<br><input type="text" id="memberID" required /></label>
         <label>Nama<br><input type="text" id="memberName" required /></label>
         <label>Alamat<br><input type="text" id="memberAddress" required /></label>
@@ -110,123 +109,245 @@
     </div>
   </div>
 
-<script>
-let members = JSON.parse(localStorage.getItem("members")) || [];
-let payments = JSON.parse(localStorage.getItem("payments")) || [];
+  <!-- Firebase + App Logic -->
+  <script type="module">
+    /*******************************
+     * 1) Firebase Setup
+     ******************************/
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+    import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-let isAdmin = false;
-function login(){
-  const user = document.getElementById("username").value.trim();
-  const pass = document.getElementById("password").value.trim();
-  if(user === "admin" && pass === "wulankwan"){
-    isAdmin = true;
-    alert("Login berhasil sebagai Admin");
-  } else {
-    isAdmin = false;
-    alert("Login sebagai User (Report saja)");
-  }
-  document.getElementById("loginBox").style.display = "none";
-  document.getElementById("menu").style.display = "flex";
-  applyRole();
-  showTab("tab-report");
-}
-function logout(){
-  isAdmin = false;
-  document.getElementById("menu").style.display = "none";
-  document.getElementById("loginBox").style.display = "block";
-  showTab("tab-report");
-}
-function applyRole(){
-  document.querySelectorAll(".adminOnly").forEach(el=>{
-    el.style.display = isAdmin ? "" : "none";
-  });
-}
+    // TODO: Ganti dengan config proyek Anda (Firebase Console → Project Settings → Your apps → Config)
+    const firebaseConfig = {
+      apiKey: "PASTE_API_KEY",
+      authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
+      projectId: "PASTE_PROJECT_ID",
+      storageBucket: "PASTE_PROJECT_ID.appspot.com",
+      messagingSenderId: "PASTE_SENDER_ID",
+      appId: "PASTE_APP_ID"
+    };
 
-function showTab(id){
-  document.querySelectorAll(".tabs > div").forEach(el => el.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-}
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-function saveMembers(){ localStorage.setItem("members", JSON.stringify(members)); }
-function savePayments(){ localStorage.setItem("payments", JSON.stringify(payments)); }
-
-function renderMembers(){
-  const tbody = document.querySelector("#memberTable tbody");
-  tbody.innerHTML = "";
-  members.forEach((m,i)=>{
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${m.id}</td><td>${m.name}</td><td>${m.address}</td><td>${m.phone}</td><td><button onclick="editMember(${i})">Edit</button><button onclick="deleteMember(${i})">Hapus</button></td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-document.getElementById("memberForm").addEventListener("submit", function(e){
-  e.preventDefault();
-  const id=document.getElementById("memberID").value.trim();
-  const data={id,name:memberName.value,address:memberAddress.value,phone:memberPhone.value};
-  const idx=members.findIndex(x=>x.id===id);
-  if(idx>=0) members[idx]=data; else members.push(data);
-  saveMembers(); renderMembers(); this.reset();
-});
-
-function editMember(i){
-  const m=members[i];
-  memberID.value=m.id; memberName.value=m.name; memberAddress.value=m.address; memberPhone.value=m.phone;
-  showTab('tab-member');
-}
-function deleteMember(i){ members.splice(i,1); saveMembers(); renderMembers(); }
-
-function renderPayments(){
-  const tbody=document.querySelector("#paymentTable tbody");
-  tbody.innerHTML="";
-  payments.forEach(p=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${p.id}</td><td>${p.name}</td><td>${p.address}</td><td>${p.phone}</td><td>${p.year}</td><td>${p.month}</td><td>${p.date}</td><td><button onclick=\"editPayment('${p.id}',${p.year},${p.month})\">Edit</button><button onclick=\"deletePayment('${p.id}',${p.year},${p.month})\">Hapus</button></td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-paymentForm.addEventListener("submit", function(e){
-  e.preventDefault();
-  const id=payID.value.trim();
-  const m=members.find(x=>x.id===id);
-  if(!m){alert("ID tidak ada"); return;}
-  const data={id,name:m.name,address:m.address,phone:m.phone,year:payYear.value,month:payMonth.value,date:payDate.value};
-  const idx=payments.findIndex(x=>x.id===id && x.year==data.year && x.month==data.month);
-  if(idx>=0) payments[idx]=data; else payments.push(data);
-  savePayments(); renderPayments(); this.reset();
-});
-
-function fillMemberData(){
-  const m=members.find(x=>x.id===payID.value.trim());
-  payName.value=m?m.name:""; payAddress.value=m?m.address:""; payPhone.value=m?m.phone:"";
-}
-function editPayment(id,year,month){
-  const p=payments.find(x=>x.id===id && x.year==year && x.month==month);
-  if(!p) return;
-  payID.value=p.id; payName.value=p.name; payAddress.value=p.address; payPhone.value=p.phone;
-  payYear.value=p.year; payMonth.value=p.month; payDate.value=p.date;
-  showTab('tab-payment');
-}
-function deletePayment(id,year,month){ payments=payments.filter(p=>!(p.id===id && p.year==year && p.month==month)); savePayments(); renderPayments(); }
-
-function generateReport(){
-  const year=Number(filterYear.value); const tbody=document.querySelector("#reportTable tbody"); tbody.innerHTML="";
-  if(!year){ alert("Masukkan Tahun terlebih dahulu!"); return; }
-  const paid=new Set(payments.filter(p=>Number(p.year)===year).map(p=>`${p.id}|${p.year}|${p.month}`));
-  members.forEach(m=>{
-    let html=`<td>${m.id}</td><td>${m.name}</td><td>${m.address}</td><td>${m.phone}</td><td>${year}</td>`;
-    for(let i=1;i<=12;i++){
-      const checked=paid.has(`${m.id}|${year}|${i}`)?"checked":"";
-      html+=`<td class='center'><input type='checkbox' ${checked} disabled></td>`;
+    /*******************************
+     * 2) Login (UI Sederhana)
+     ******************************/
+    let isAdmin = false;
+    window.login = function(){
+      const user = document.getElementById("username").value.trim();
+      const pass = document.getElementById("password").value.trim();
+      if(user === "admin" && pass === "wulankwan"){ // sesuai versi sebelumnya
+        isAdmin = true;
+        alert("Login berhasil sebagai Admin");
+      } else {
+        isAdmin = false;
+        alert("Login sebagai User (Report saja)");
+      }
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("menu").style.display = "flex";
+      applyRole();
+      showTab("tab-report");
     }
-    const tr=document.createElement("tr"); tr.innerHTML=html; tbody.appendChild(tr);
-  });
-}
 
-function exportExcel(){ const wb=XLSX.utils.table_to_book(reportTable,{sheet:"Report"}); XLSX.writeFile(wb,"Report.xlsx"); }
+    window.logout = function(){
+      isAdmin = false;
+      document.getElementById("menu").style.display = "none";
+      document.getElementById("loginBox").style.display = "block";
+      showTab("tab-report");
+    }
 
-renderMembers(); renderPayments();
-</script>
+    window.applyRole = function(){
+      document.querySelectorAll(".adminOnly").forEach(el=>{
+        el.style.display = isAdmin ? "" : "none";
+      });
+    }
+
+    window.showTab = function(id){
+      document.querySelectorAll(".tabs > div").forEach(el => el.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+    }
+
+    /*******************************
+     * 3) Members (CRUD via Firestore)
+     ******************************/
+    const membersCol = collection(db, 'members');
+    const paymentsCol = collection(db, 'payments');
+
+    const memberForm = document.getElementById('memberForm');
+    const memberTableBody = document.querySelector('#memberTable tbody');
+
+    // Render realtime members table
+    onSnapshot(query(membersCol, orderBy('id')), (snap) => {
+      memberTableBody.innerHTML = '';
+      snap.forEach(docSnap => {
+        const m = docSnap.data();
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${m.id}</td>
+          <td>${m.name}</td>
+          <td>${m.address}</td>
+          <td>${m.phone}</td>
+          <td>
+            <button onclick="editMember('${m.id}')">Edit</button>
+            <button onclick="deleteMember('${m.id}')">Hapus</button>
+          </td>`;
+        memberTableBody.appendChild(tr);
+      });
+    });
+
+    memberForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('memberID').value.trim();
+      const data = {
+        id,
+        name: document.getElementById('memberName').value.trim(),
+        address: document.getElementById('memberAddress').value.trim(),
+        phone: document.getElementById('memberPhone').value.trim()
+      };
+      if(!id){ alert('ID wajib diisi'); return; }
+      await setDoc(doc(membersCol, id), data);
+      memberForm.reset();
+    });
+
+    window.editMember = async function(id){
+      const snap = await getDoc(doc(membersCol, id));
+      if(!snap.exists()) return;
+      const m = snap.data();
+      document.getElementById('memberID').value = m.id;
+      document.getElementById('memberName').value = m.name;
+      document.getElementById('memberAddress').value = m.address;
+      document.getElementById('memberPhone').value = m.phone;
+      showTab('tab-member');
+    }
+
+    window.deleteMember = async function(id){
+      if(!confirm('Hapus member dan semua pembayaran terkait?')) return;
+      // hapus payments terkait member ini
+      const paysQ = query(paymentsCol, where('id','==', id));
+      const paysSnap = await getDocs(paysQ);
+      for (const docSnap of paysSnap.docs) {
+        await deleteDoc(doc(paymentsCol, docSnap.id));
+      }
+      await deleteDoc(doc(membersCol, id));
+    }
+
+    /*******************************
+     * 4) Payments (CRUD via Firestore)
+     ******************************/
+    const paymentForm = document.getElementById('paymentForm');
+    const paymentTableBody = document.querySelector('#paymentTable tbody');
+
+    // Realtime list of payments
+    onSnapshot(query(paymentsCol, orderBy('year'), orderBy('month')), (snap) => {
+      paymentTableBody.innerHTML = '';
+      snap.forEach(docSnap => {
+        const p = docSnap.data();
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.id}</td>
+          <td>${p.name}</td>
+          <td>${p.address}</td>
+          <td>${p.phone}</td>
+          <td>${p.year}</td>
+          <td>${p.month}</td>
+          <td>${p.date}</td>
+          <td>
+            <button onclick="editPayment('${p.id}', ${p.year}, ${p.month})">Edit</button>
+            <button onclick="deletePayment('${p.id}', ${p.year}, ${p.month})">Hapus</button>
+          </td>`;
+        paymentTableBody.appendChild(tr);
+      });
+    });
+
+    paymentForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('payID').value.trim();
+      const year = Number(document.getElementById('payYear').value);
+      const month = Number(document.getElementById('payMonth').value);
+      const date = document.getElementById('payDate').value;
+
+      // cek member
+      const mSnap = await getDoc(doc(membersCol, id));
+      if(!mSnap.exists()) { alert('ID tidak ada di Database Member'); return; }
+      const m = mSnap.data();
+
+      const key = `${id}_${year}_${month}`; // doc id unik per periode
+      const data = { id, name: m.name, address: m.address, phone: m.phone, year, month, date };
+      await setDoc(doc(paymentsCol, key), data);
+      paymentForm.reset();
+    });
+
+    window.fillMemberData = async function(){
+      const id = document.getElementById('payID').value.trim();
+      if(!id){ document.getElementById('payName').value = ''; document.getElementById('payAddress').value=''; document.getElementById('payPhone').value=''; return; }
+      const mSnap = await getDoc(doc(membersCol, id));
+      const m = mSnap.exists() ? mSnap.data() : null;
+      document.getElementById('payName').value = m ? m.name : '';
+      document.getElementById('payAddress').value = m ? m.address : '';
+      document.getElementById('payPhone').value = m ? m.phone : '';
+    }
+
+    window.editPayment = async function(id, year, month){
+      const key = `${id}_${year}_${month}`;
+      const pSnap = await getDoc(doc(paymentsCol, key));
+      if(!pSnap.exists()) return;
+      const p = pSnap.data();
+      document.getElementById('payID').value = p.id;
+      document.getElementById('payName').value = p.name;
+      document.getElementById('payAddress').value = p.address;
+      document.getElementById('payPhone').value = p.phone;
+      document.getElementById('payYear').value = p.year;
+      document.getElementById('payMonth').value = p.month;
+      document.getElementById('payDate').value = p.date;
+      showTab('tab-payment');
+    }
+
+    window.deletePayment = async function(id, year, month){
+      if(!confirm('Hapus pembayaran ini?')) return;
+      const key = `${id}_${year}_${month}`;
+      await deleteDoc(doc(paymentsCol, key));
+    }
+
+    /*******************************
+     * 5) Report
+     ******************************/
+    window.generateReport = async function(){
+      const year = Number(document.getElementById('filterYear').value);
+      const tbody = document.querySelector('#reportTable tbody');
+      tbody.innerHTML = '';
+      if(!year){ alert('Masukkan Tahun terlebih dahulu!'); return; }
+
+      // ambil semua member
+      const membersSnap = await getDocs(query(membersCol, orderBy('id')));
+      const membersData = membersSnap.docs.map(d => d.data());
+
+      // ambil pembayaran tahun tsb
+      const paysSnap = await getDocs(query(paymentsCol, where('year','==', year)));
+      const paidSet = new Set(paysSnap.docs.map(d => {
+        const p = d.data();
+        return `${p.id}|${p.year}|${p.month}`;
+      }));
+
+      for(const m of membersData){
+        let html = `<td>${m.id}</td><td>${m.name}</td><td>${m.address}</td><td>${m.phone}</td><td>${year}</td>`;
+        for(let i=1;i<=12;i++){
+          const checked = paidSet.has(`${m.id}|${year}|${i}`) ? 'checked' : '';
+          html += `<td class='center'><input type='checkbox' ${checked} disabled></td>`;
+        }
+        const tr = document.createElement('tr');
+        tr.innerHTML = html;
+        tbody.appendChild(tr);
+      }
+    }
+
+    window.exportExcel = function(){
+      const wb = XLSX.utils.table_to_book(document.getElementById('reportTable'), {sheet:'Report'});
+      XLSX.writeFile(wb, 'Report.xlsx');
+    }
+
+    // Default tab
+    showTab('tab-report');
+  </script>
 </body>
 </html>
