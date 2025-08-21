@@ -1,353 +1,82 @@
 <!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8" />
-  <title>Manajemen Member & Pembayaran — Firebase</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <style>
-    :root { --gap: 10px; }
-    * { box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f5f8fa; }
-    h2 { margin: 0 0 16px; }
-    nav { display: flex; flex-wrap: wrap; gap: var(--gap); margin-bottom: 16px; }
-    button { padding: 8px 12px; cursor: pointer; border-radius: 8px; border: 1px solid #aaa; background: #e3f2fd; }
-    button:hover { background: #bbdefb; }
-    .tabs > div { display: none; padding: 12px; border-radius: 8px; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-    .tabs > div.active { display: block; }
-    input, select { padding: 6px 8px; border: 1px solid #bbb; border-radius: 6px; }
-    form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--gap); align-items: end; }
-    form button[type="submit"] { grid-column: 1 / -1; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; background: #fff; }
-    th, td { border: 1px solid #aaa; padding: 6px; text-align: left; }
-    th { background: #90caf9; color: #0d47a1; }
-    td.center { text-align: center; }
-    .toolbar { display: flex; gap: var(--gap); flex-wrap: wrap; margin: 8px 0 12px; }
-    .muted { color: #666; font-size: 12px; }
-    input[type="checkbox"] { transform: scale(1.2); accent-color: #0d47a1; }
+window.fillMemberData = async function(){
+const id = document.getElementById('payID').value.trim();
+if(!id){ document.getElementById('payName').value = ''; document.getElementById('payAddress').value=''; document.getElementById('payPhone').value=''; return; }
+const mSnap = await getDoc(doc(membersCol, id));
+const m = mSnap.exists() ? mSnap.data() : null;
+document.getElementById('payName').value = m ? m.name : '';
+document.getElementById('payAddress').value = m ? m.address : '';
+document.getElementById('payPhone').value = m ? m.phone : '';
+}
 
-    @media print {
-      nav, .no-print, form, .muted { display: none !important; }
-      body { margin: 0.5cm; background: #fff; }
-      table { page-break-inside: avoid; }
-      th, td { font-size: 11px; }
-    }
-  </style>
-</head>
-<body>
-  <h2>📋 Sistem Member & Pembayaran (Firestore)</h2>
 
-  <!-- LOGIN (UI saja; bukan Firebase Auth) -->
-  <div id="loginBox" class="no-print">
-    <h3>Login</h3>
-    <label>Username <input type="text" id="username"></label>
-    <label>Password <input type="password" id="password"></label>
-    <button onclick="login()">Login</button>
-  </div>
+window.editPayment = async function(id, year, month){
+const key = `${id}_${year}_${month}`;
+const pSnap = await getDoc(doc(paymentsCol, key));
+if(!pSnap.exists()) return;
+const p = pSnap.data();
+document.getElementById('payID').value = p.id;
+document.getElementById('payName').value = p.name;
+document.getElementById('payAddress').value = p.address;
+document.getElementById('payPhone').value = p.phone;
+document.getElementById('payYear').value = p.year;
+document.getElementById('payMonth').value = p.month;
+document.getElementById('payDate').value = p.date;
+showTab('tab-payment');
+}
 
-  <nav class="no-print" id="menu" style="display:none;">
-    <button onclick="showTab('tab-member')" class="adminOnly">Database Member</button>
-    <button onclick="showTab('tab-payment')" class="adminOnly">Pembayaran</button>
-    <button onclick="showTab('tab-report')">Report Rekap</button>
-    <button onclick="logout()">Logout</button>
-  </nav>
 
-  <div class="tabs">
-    <div id="tab-member" class="adminOnly">
-      <h3>Database Member</h3>
-      <form id="memberForm">
-        <label>ID<br><input type="text" id="memberID" required /></label>
-        <label>Nama<br><input type="text" id="memberName" required /></label>
-        <label>Alamat<br><input type="text" id="memberAddress" required /></label>
-        <label>No HP<br><input type="text" id="memberPhone" required /></label>
-        <button type="submit">Simpan Member</button>
-      </form>
-      <table id="memberTable">
-        <thead><tr><th>ID</th><th>Nama</th><th>Alamat</th><th>No HP</th><th>Aksi</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
+window.deletePayment = async function(id, year, month){
+if(!confirm('Hapus pembayaran ini?')) return;
+const key = `${id}_${year}_${month}`;
+await deleteDoc(doc(paymentsCol, key));
+}
 
-    <div id="tab-payment" class="adminOnly">
-      <h3>Pembayaran</h3>
-      <form id="paymentForm">
-        <label>ID Member<br><input type="text" id="payID" required onblur="fillMemberData()" /></label>
-        <label>Nama<br><input type="text" id="payName" readonly /></label>
-        <label>Alamat<br><input type="text" id="payAddress" readonly /></label>
-        <label>No HP<br><input type="text" id="payPhone" readonly /></label>
-        <label>Tahun<br><input type="number" id="payYear" required /></label>
-        <label>Bulan<br><input type="number" id="payMonth" min="1" max="12" required /></label>
-        <label>Tgl Bayar<br><input type="date" id="payDate" required /></label>
-        <button type="submit">Simpan Pembayaran</button>
-      </form>
-      <table id="paymentTable">
-        <thead><tr><th>ID</th><th>Nama</th><th>Alamat</th><th>No HP</th><th>Tahun</th><th>Bulan</th><th>Tgl Bayar</th><th>Aksi</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
 
-    <!-- TAB: REPORT -->
-    <div id="tab-report">
-      <h3>Report Rekap (Matrix Jan–Des)</h3>
-      <div class="toolbar no-print">
-        <label>Tahun <input type="number" id="filterYear" placeholder="mis. 2025" /></label>
-        <button onclick="generateReport()">Tampilkan</button>
-        <button onclick="exportExcel()">Export Excel</button>
-        <button onclick="window.print()">Print</button>
-      </div>
-      <table id="reportTable">
-        <thead>
-          <tr>
-            <th>ID</th><th>Nama</th><th>Alamat</th><th>No HP</th><th>Tahun</th>
-            <th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>Mei</th><th>Jun</th>
-            <th>Jul</th><th>Agu</th><th>Sep</th><th>Okt</th><th>Nov</th><th>Des</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <div class="muted">Keterangan: ✅ = Lunas, – = Belum Bayar</div>
-    </div>
-  </div>
+/*******************************
+* 5) Report
+******************************/
+window.generateReport = async function(){
+const year = Number(document.getElementById('filterYear').value);
+const tbody = document.querySelector('#reportTable tbody');
+tbody.innerHTML = '';
+if(!year){ alert('Masukkan Tahun terlebih dahulu!'); return; }
 
-  <!-- Firebase + App Logic -->
-  <script type="module">
-    /*******************************
-     * 1) Firebase Setup
-     ******************************/
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
-    import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-    // TODO: Ganti dengan config proyek Anda (Firebase Console → Project Settings → Your apps → Config)
-    const firebaseConfig = {
-      apiKey: "PASTE_API_KEY",
-      authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
-      projectId: "PASTE_PROJECT_ID",
-      storageBucket: "PASTE_PROJECT_ID.appspot.com",
-      messagingSenderId: "PASTE_SENDER_ID",
-      appId: "PASTE_APP_ID"
-    };
+// ambil semua member
+const membersSnap = await getDocs(query(membersCol, orderBy('id')));
+const membersData = membersSnap.docs.map(d => d.data());
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
 
-    /*******************************
-     * 2) Login (UI Sederhana)
-     ******************************/
-    let isAdmin = false;
-    window.login = function(){
-      const user = document.getElementById("username").value.trim();
-      const pass = document.getElementById("password").value.trim();
-      if(user === "admin" && pass === "wulankwan"){ // sesuai versi sebelumnya
-        isAdmin = true;
-        alert("Login berhasil sebagai Admin");
-      } else {
-        isAdmin = false;
-        alert("Login sebagai User (Report saja)");
-      }
-      document.getElementById("loginBox").style.display = "none";
-      document.getElementById("menu").style.display = "flex";
-      applyRole();
-      showTab("tab-report");
-    }
+// ambil pembayaran tahun tsb
+const paysSnap = await getDocs(query(paymentsCol, where('year','==', year)));
+const paidSet = new Set(paysSnap.docs.map(d => {
+const p = d.data();
+return `${p.id}|${p.year}|${p.month}`;
+}));
 
-    window.logout = function(){
-      isAdmin = false;
-      document.getElementById("menu").style.display = "none";
-      document.getElementById("loginBox").style.display = "block";
-      showTab("tab-report");
-    }
 
-    window.applyRole = function(){
-      document.querySelectorAll(".adminOnly").forEach(el=>{
-        el.style.display = isAdmin ? "" : "none";
-      });
-    }
+for(const m of membersData){
+let html = `<td>${m.id}</td><td>${m.name}</td><td>${m.address}</td><td>${m.phone}</td><td>${year}</td>`;
+for(let i=1;i<=12;i++){
+const checked = paidSet.has(`${m.id}|${year}|${i}`) ? 'checked' : '';
+html += `<td class='center'><input type='checkbox' ${checked} disabled></td>`;
+}
+const tr = document.createElement('tr');
+tr.innerHTML = html;
+tbody.appendChild(tr);
+}
+}
 
-    window.showTab = function(id){
-      document.querySelectorAll(".tabs > div").forEach(el => el.classList.remove("active"));
-      document.getElementById(id).classList.add("active");
-    }
 
-    /*******************************
-     * 3) Members (CRUD via Firestore)
-     ******************************/
-    const membersCol = collection(db, 'members');
-    const paymentsCol = collection(db, 'payments');
+window.exportExcel = function(){
+const wb = XLSX.utils.table_to_book(document.getElementById('reportTable'), {sheet:'Report'});
+XLSX.writeFile(wb, 'Report.xlsx');
+}
 
-    const memberForm = document.getElementById('memberForm');
-    const memberTableBody = document.querySelector('#memberTable tbody');
 
-    // Render realtime members table
-    onSnapshot(query(membersCol, orderBy('id')), (snap) => {
-      memberTableBody.innerHTML = '';
-      snap.forEach(docSnap => {
-        const m = docSnap.data();
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${m.id}</td>
-          <td>${m.name}</td>
-          <td>${m.address}</td>
-          <td>${m.phone}</td>
-          <td>
-            <button onclick="editMember('${m.id}')">Edit</button>
-            <button onclick="deleteMember('${m.id}')">Hapus</button>
-          </td>`;
-        memberTableBody.appendChild(tr);
-      });
-    });
-
-    memberForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const id = document.getElementById('memberID').value.trim();
-      const data = {
-        id,
-        name: document.getElementById('memberName').value.trim(),
-        address: document.getElementById('memberAddress').value.trim(),
-        phone: document.getElementById('memberPhone').value.trim()
-      };
-      if(!id){ alert('ID wajib diisi'); return; }
-      await setDoc(doc(membersCol, id), data);
-      memberForm.reset();
-    });
-
-    window.editMember = async function(id){
-      const snap = await getDoc(doc(membersCol, id));
-      if(!snap.exists()) return;
-      const m = snap.data();
-      document.getElementById('memberID').value = m.id;
-      document.getElementById('memberName').value = m.name;
-      document.getElementById('memberAddress').value = m.address;
-      document.getElementById('memberPhone').value = m.phone;
-      showTab('tab-member');
-    }
-
-    window.deleteMember = async function(id){
-      if(!confirm('Hapus member dan semua pembayaran terkait?')) return;
-      // hapus payments terkait member ini
-      const paysQ = query(paymentsCol, where('id','==', id));
-      const paysSnap = await getDocs(paysQ);
-      for (const docSnap of paysSnap.docs) {
-        await deleteDoc(doc(paymentsCol, docSnap.id));
-      }
-      await deleteDoc(doc(membersCol, id));
-    }
-
-    /*******************************
-     * 4) Payments (CRUD via Firestore)
-     ******************************/
-    const paymentForm = document.getElementById('paymentForm');
-    const paymentTableBody = document.querySelector('#paymentTable tbody');
-
-    // Realtime list of payments
-    onSnapshot(query(paymentsCol, orderBy('year'), orderBy('month')), (snap) => {
-      paymentTableBody.innerHTML = '';
-      snap.forEach(docSnap => {
-        const p = docSnap.data();
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${p.id}</td>
-          <td>${p.name}</td>
-          <td>${p.address}</td>
-          <td>${p.phone}</td>
-          <td>${p.year}</td>
-          <td>${p.month}</td>
-          <td>${p.date}</td>
-          <td>
-            <button onclick="editPayment('${p.id}', ${p.year}, ${p.month})">Edit</button>
-            <button onclick="deletePayment('${p.id}', ${p.year}, ${p.month})">Hapus</button>
-          </td>`;
-        paymentTableBody.appendChild(tr);
-      });
-    });
-
-    paymentForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const id = document.getElementById('payID').value.trim();
-      const year = Number(document.getElementById('payYear').value);
-      const month = Number(document.getElementById('payMonth').value);
-      const date = document.getElementById('payDate').value;
-
-      // cek member
-      const mSnap = await getDoc(doc(membersCol, id));
-      if(!mSnap.exists()) { alert('ID tidak ada di Database Member'); return; }
-      const m = mSnap.data();
-
-      const key = `${id}_${year}_${month}`; // doc id unik per periode
-      const data = { id, name: m.name, address: m.address, phone: m.phone, year, month, date };
-      await setDoc(doc(paymentsCol, key), data);
-      paymentForm.reset();
-    });
-
-    window.fillMemberData = async function(){
-      const id = document.getElementById('payID').value.trim();
-      if(!id){ document.getElementById('payName').value = ''; document.getElementById('payAddress').value=''; document.getElementById('payPhone').value=''; return; }
-      const mSnap = await getDoc(doc(membersCol, id));
-      const m = mSnap.exists() ? mSnap.data() : null;
-      document.getElementById('payName').value = m ? m.name : '';
-      document.getElementById('payAddress').value = m ? m.address : '';
-      document.getElementById('payPhone').value = m ? m.phone : '';
-    }
-
-    window.editPayment = async function(id, year, month){
-      const key = `${id}_${year}_${month}`;
-      const pSnap = await getDoc(doc(paymentsCol, key));
-      if(!pSnap.exists()) return;
-      const p = pSnap.data();
-      document.getElementById('payID').value = p.id;
-      document.getElementById('payName').value = p.name;
-      document.getElementById('payAddress').value = p.address;
-      document.getElementById('payPhone').value = p.phone;
-      document.getElementById('payYear').value = p.year;
-      document.getElementById('payMonth').value = p.month;
-      document.getElementById('payDate').value = p.date;
-      showTab('tab-payment');
-    }
-
-    window.deletePayment = async function(id, year, month){
-      if(!confirm('Hapus pembayaran ini?')) return;
-      const key = `${id}_${year}_${month}`;
-      await deleteDoc(doc(paymentsCol, key));
-    }
-
-    /*******************************
-     * 5) Report
-     ******************************/
-    window.generateReport = async function(){
-      const year = Number(document.getElementById('filterYear').value);
-      const tbody = document.querySelector('#reportTable tbody');
-      tbody.innerHTML = '';
-      if(!year){ alert('Masukkan Tahun terlebih dahulu!'); return; }
-
-      // ambil semua member
-      const membersSnap = await getDocs(query(membersCol, orderBy('id')));
-      const membersData = membersSnap.docs.map(d => d.data());
-
-      // ambil pembayaran tahun tsb
-      const paysSnap = await getDocs(query(paymentsCol, where('year','==', year)));
-      const paidSet = new Set(paysSnap.docs.map(d => {
-        const p = d.data();
-        return `${p.id}|${p.year}|${p.month}`;
-      }));
-
-      for(const m of membersData){
-        let html = `<td>${m.id}</td><td>${m.name}</td><td>${m.address}</td><td>${m.phone}</td><td>${year}</td>`;
-        for(let i=1;i<=12;i++){
-          const checked = paidSet.has(`${m.id}|${year}|${i}`) ? 'checked' : '';
-          html += `<td class='center'><input type='checkbox' ${checked} disabled></td>`;
-        }
-        const tr = document.createElement('tr');
-        tr.innerHTML = html;
-        tbody.appendChild(tr);
-      }
-    }
-
-    window.exportExcel = function(){
-      const wb = XLSX.utils.table_to_book(document.getElementById('reportTable'), {sheet:'Report'});
-      XLSX.writeFile(wb, 'Report.xlsx');
-    }
-
-    // Default tab
-    showTab('tab-report');
-  </script>
+// Default tab
+showTab('tab-report');
+</script>
 </body>
 </html>
