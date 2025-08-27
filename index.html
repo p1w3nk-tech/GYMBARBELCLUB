@@ -1,319 +1,179 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <title>Manajemen Member & Pembayaran</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Sistem Member & Pembayaran</title>
   <style>
-    :root { --gap: 10px; }
-    * { box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f5f8fa; }
-    h2 { margin: 0 0 16px; }
-    nav { display: flex; flex-wrap: wrap; gap: var(--gap); margin-bottom: 16px; }
-    button { padding: 8px 12px; cursor: pointer; border-radius: 8px; border: 1px solid #aaa; background: #e3f2fd; }
-    button:hover { background: #bbdefb; }
-    .tabs > div { display: none; padding: 12px; border-radius: 8px; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-    .tabs > div.active { display: block; }
-    input, select { padding: 6px 8px; border: 1px solid #bbb; border-radius: 6px; }
-    form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--gap); align-items: end; }
-    form button[type="submit"] { grid-column: 1 / -1; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; background: #fff; }
-    th, td { border: 1px solid #aaa; padding: 6px; text-align: left; }
-    th { background: #90caf9; color: #0d47a1; }
-    td.center { text-align: center; }
-    .toolbar { display: flex; gap: var(--gap); flex-wrap: wrap; margin: 8px 0 12px; }
-    .muted { color: #666; font-size: 12px; }
-    input[type="checkbox"] { transform: scale(1.2); accent-color: #0d47a1; }
-
-    @media print {
-      nav, .no-print, form, .muted { display: none !important; }
-      body { margin: 0.5cm; background: #fff; }
-      table { page-break-inside: avoid; }
-      th, td { font-size: 11px; }
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+    h2 { margin-bottom: 10px; }
+    nav button { margin: 5px; padding: 10px; }
+    .tab { display: none; margin-top: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 6px; text-align: center; }
   </style>
 </head>
 <body>
+
   <h2>📋 Sistem Member & Pembayaran</h2>
 
-  <!-- LOGIN -->
-  <div id="loginBox" class="no-print">
-    <h3>Login</h3>
-    <label>Email <input type="text" id="username"></label>
-    <label>Password <input type="password" id="password"></label>
-    <button onclick="loginFirebase()">Login</button>
-  </div>
-
-  <nav class="no-print" id="menu" style="display:none;">
-    <button onclick="showTab('tab-member')" class="adminOnly">Database Member</button>
-    <button onclick="showTab('tab-payment')" class="adminOnly">Pembayaran</button>
-    <button onclick="showTab('tab-report')">Report Rekap</button>
-    <button onclick="logoutFirebase()">Logout</button>
+  <nav>
+    <button onclick="showTab('memberTab')">Database Member</button>
+    <button onclick="showTab('paymentTab')">Pembayaran</button>
+    <button onclick="showTab('reportTab')">Report Rekap</button>
+    <button onclick="logout()">Logout</button>
   </nav>
 
-  <div class="tabs">
-    <div id="tab-member" class="adminOnly">
-      <h3>Database Member</h3>
-      <form id="memberForm">
-        <label>ID<br><input type="text" id="memberID" required /></label>
-        <label>Nama<br><input type="text" id="memberName" required /></label>
-        <label>Alamat<br><input type="text" id="memberAddress" required /></label>
-        <label>No HP<br><input type="text" id="memberPhone" required /></label>
-        <button type="submit">Simpan Member</button>
-      </form>
-      <table id="memberTable">
-        <thead><tr><th>ID</th><th>Nama</th><th>Alamat</th><th>No HP</th><th>Aksi</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <div id="tab-payment" class="adminOnly">
-      <h3>Pembayaran</h3>
-      <form id="paymentForm">
-        <label>ID Member<br><input type="text" id="payID" required onblur="fillMemberData()" /></label>
-        <label>Nama<br><input type="text" id="payName" readonly /></label>
-        <label>Alamat<br><input type="text" id="payAddress" readonly /></label>
-        <label>No HP<br><input type="text" id="payPhone" readonly /></label>
-        <label>Tahun<br><input type="number" id="payYear" required /></label>
-        <label>Bulan<br><input type="number" id="payMonth" min="1" max="12" required /></label>
-        <label>Tgl Bayar<br><input type="date" id="payDate" required /></label>
-        <button type="submit">Simpan Pembayaran</button>
-      </form>
-      <table id="paymentTable">
-        <thead><tr><th>ID</th><th>Nama</th><th>Alamat</th><th>No HP</th><th>Tahun</th><th>Bulan</th><th>Tgl Bayar</th><th>Aksi</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <div id="tab-report">
-      <h3>Report Rekap (Matrix Jan–Des)</h3>
-      <div class="toolbar no-print">
-        <label>Tahun <input type="number" id="filterYear" placeholder="mis. 2025" /></label>
-        <button onclick="generateReport()">Tampilkan</button>
-        <button onclick="exportExcel()">Export Excel</button>
-        <button onclick="window.print()">Print</button>
-      </div>
-      <table id="reportTable">
-        <thead>
-          <tr>
-            <th>ID</th><th>Nama</th><th>Alamat</th><th>No HP</th><th>Tahun</th>
-            <th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>Mei</th><th>Jun</th>
-            <th>Jul</th><th>Agu</th><th>Sep</th><th>Okt</th><th>Nov</th><th>Des</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <div class="muted">Keterangan: ✅ = Lunas, – = Belum Bayar</div>
-    </div>
+  <!-- =================== MEMBER =================== -->
+  <div id="memberTab" class="tab">
+    <h3>Tambah Member</h3>
+    <form id="memberForm">
+      <label>ID<br><input type="text" id="memberID" required></label><br>
+      <label>Nama<br><input type="text" id="memberName" required></label><br>
+      <label>Alamat<br><input type="text" id="memberAddress" required></label><br>
+      <label>No HP<br><input type="text" id="memberPhone" required></label><br>
+      <button type="submit">Simpan Member</button>
+    </form>
   </div>
 
-<!-- Firebase -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-  import { getFirestore, collection, getDocs, setDoc, doc, deleteDoc } 
-    from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-  import { getAuth, signInWithEmailAndPassword, signOut } 
-    from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+  <!-- =================== PAYMENT =================== -->
+  <div id="paymentTab" class="tab">
+    <h3>Tambah Pembayaran</h3>
+    <form id="paymentForm">
+      <label>ID Member<br><input type="text" id="payID" required></label><br>
+      <label>Nama<br><input type="text" id="payName" readonly></label><br>
+      <label>Alamat<br><input type="text" id="payAddress" readonly></label><br>
+      <label>No HP<br><input type="text" id="payPhone" readonly></label><br>
+      <label>Tahun<br><input type="number" id="payYear" required></label><br>
+      <label>Bulan<br><input type="number" id="payMonth" min="1" max="12" required></label><br>
+      <label>Tanggal Bayar<br><input type="date" id="payDate" required></label><br>
+      <button type="submit">Simpan Pembayaran</button>
+    </form>
+  </div>
 
-  // 🔹 Ganti config di bawah dengan yang asli dari Firebase Console
-  const firebaseConfig = {
-  apiKey: "AIzaSyCSKjBcT_oc7Lc991ZQehtrZku0r8ocvE8",
-  authDomain: "coba-8f9af.firebaseapp.com",
-  projectId: "coba-8f9af",
-  storageBucket: "coba-8f9af.firebasestorage.app",
-  messagingSenderId: "375276847460",
-  appId: "1:375276847460:web:f1df0de167aa1612cc7a71",
-  measurementId: "G-97Y1D758BR"
-};
+  <!-- =================== REPORT =================== -->
+  <div id="reportTab" class="tab">
+    <h3>Report Rekap (Matrix Jan–Des)</h3>
+    <label>Tahun <input type="number" id="reportYear" value="2025"></label>
+    <button onclick="generateReport()">Tampilkan</button>
+    <button onclick="exportExcel()">Export Excel</button>
+    <button onclick="window.print()">Print</button>
+    <table id="reportTable">
+      <thead>
+        <tr>
+          <th>ID</th><th>Nama</th><th>Alamat</th><th>No HP</th><th>Tahun</th>
+          <th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>Mei</th><th>Jun</th>
+          <th>Jul</th><th>Agu</th><th>Sep</th><th>Okt</th><th>Nov</th><th>Des</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
+  <!-- =================== FIREBASE =================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-  let members = [];
-  let payments = [];
-  let isAdmin = false;
+    // ✅ Ganti dengan config project Firebase Anda
+		const firebaseConfig = {
+		apiKey: "AIzaSyCSKjBcT_oc7Lc991ZQehtrZku0r8ocvE8",
+	authDomain: "coba-8f9af.firebaseapp.com",
+	projectId: "coba-8f9af",
+	storageBucket: "coba-8f9af.firebasestorage.app",
+	messagingSenderId: "375276847460",
+	appId: "1:375276847460:web:f1df0de167aa1612cc7a71",
+	measurementId: "G-97Y1D758BR"
+	};
 
-  // ================= LOGIN =================
-  async function loginFirebase(){
-    const email = document.getElementById("username").value.trim();
-    const pass = document.getElementById("password").value.trim();
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-      const user = userCredential.user;
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
 
-      // cek apakah admin
-      isAdmin = (user.email === "admin@app.com");
-
-      alert("Login berhasil sebagai " + (isAdmin ? "Admin" : "User"));
-      document.getElementById("loginBox").style.display = "none";
-      document.getElementById("menu").style.display = "flex";
-      applyRole();
-      showTab("tab-report");
-      loadMembers();
-      loadPayments();
-    } catch (e) {
-      alert("Login gagal: " + e.message);
-    }
-  }
-  window.loginFirebase = loginFirebase;
-
-  async function logoutFirebase(){
-    await signOut(auth);
-    isAdmin = false;
-    document.getElementById("menu").style.display = "none";
-    document.getElementById("loginBox").style.display = "block";
-    showTab("tab-report");
-  }
-  window.logoutFirebase = logoutFirebase;
-
-  function applyRole(){
-    if (isAdmin) {
-      // Admin: semua menu tampil
-      document.querySelectorAll(".adminOnly").forEach(el=>{ el.style.display = ""; });
-    } else {
-      // User: hanya report
-      document.querySelectorAll(".adminOnly").forEach(el=>{ el.style.display = "none"; });
-      showTab("tab-report");
-    }
-  }
-
-  function showTab(id){
-    document.querySelectorAll(".tabs > div").forEach(el => el.classList.remove("active"));
-    document.getElementById(id).classList.add("active");
-  }
-
-  // ================= FIRESTORE CRUD =================
-  async function loadMembers(){
-    const querySnapshot = await getDocs(collection(db, "members"));
-    members = querySnapshot.docs.map(doc => doc.data());
-    renderMembers();
-  }
-
-  async function saveMember(member){
-    await setDoc(doc(db, "members", member.id), member);
-    await loadMembers();
-  }
-
-  async function deleteMember(i){
-    const m = members[i];
-    await deleteDoc(doc(db, "members", m.id));
-    await loadMembers();
-  }
-  window.deleteMember = deleteMember;
-
-  async function loadPayments(){
-    const querySnapshot = await getDocs(collection(db, "payments"));
-    payments = querySnapshot.docs.map(doc => doc.data());
-    renderPayments();
-  }
-
-  async function savePayment(payment){
-    const key = `${payment.id}_${payment.year}_${payment.month}`;
-    await setDoc(doc(db, "payments", key), payment);
-    await loadPayments();
-  }
-
-  async function deletePaymentById(id,year,month){
-    const key = `${id}_${year}_${month}`;
-    await deleteDoc(doc(db, "payments", key));
-    await loadPayments();
-  }
-  window.deletePaymentById = deletePaymentById;
-
-  // ================= RENDER =================
-  function renderMembers(){
-    const tbody = document.querySelector("#memberTable tbody");
-    tbody.innerHTML = "";
-    members.forEach((m,i)=>{
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${m.id}</td><td>${m.name}</td><td>${m.address}</td><td>${m.phone}</td>
-        <td><button onclick="editMember(${i})">Edit</button>
-        <button onclick="deleteMember(${i})">Hapus</button></td>`;
-      tbody.appendChild(tr);
-    });
-    applyRole();
-  }
-
-  function renderPayments(){
-    const tbody=document.querySelector("#paymentTable tbody");
-    tbody.innerHTML="";
-    payments.forEach(p=>{
-      const tr=document.createElement("tr");
-      tr.innerHTML=`<td>${p.id}</td><td>${p.name}</td><td>${p.address}</td><td>${p.phone}</td>
-      <td>${p.year}</td><td>${p.month}</td><td>${p.date}</td>
-      <td><button onclick="editPayment('${p.id}',${p.year},${p.month})">Edit</button>
-      <button onclick="deletePaymentById('${p.id}',${p.year},${p.month})">Hapus</button></td>`;
-      tbody.appendChild(tr);
-    });
-    applyRole();
-  }
-
-  // ================= FORM HANDLER =================
-  document.getElementById("memberForm").addEventListener("submit", async function(e){
-    e.preventDefault();
-    const data={
-      id: memberID.value.trim(),
-      name: memberName.value,
-      address: memberAddress.value,
-      phone: memberPhone.value
-    };
-    await saveMember(data);
-    this.reset();
-  });
-
-  function editMember(i){
-    const m=members[i];
-    memberID.value=m.id; memberName.value=m.name; memberAddress.value=m.address; memberPhone.value=m.phone;
-    showTab('tab-member');
-  }
-  window.editMember = editMember;
-
-  document.getElementById("paymentForm").addEventListener("submit", async function(e){
-    e.preventDefault();
-    const id=payID.value.trim();
-    const m=members.find(x=>x.id===id);
-    if(!m){alert("ID tidak ada"); return;}
-    const data={id,name:m.name,address:m.address,phone:m.phone,year:payYear.value,month:payMonth.value,date:payDate.value};
-    await savePayment(data);
-    this.reset();
-  });
-
-  function fillMemberData(){
-    const m=members.find(x=>x.id===payID.value.trim());
-    payName.value=m?m.name:""; payAddress.value=m?m.address:""; payPhone.value=m?m.phone:"";
-  }
-  window.fillMemberData = fillMemberData;
-
-  function editPayment(id,year,month){
-    const p=payments.find(x=>x.id===id && x.year==year && x.month==month);
-    if(!p) return;
-    payID.value=p.id; payName.value=p.name; payAddress.value=p.address; payPhone.value=p.phone;
-    payYear.value=p.year; payMonth.value=p.month; payDate.value=p.date;
-    showTab('tab-payment');
-  }
-  window.editPayment = editPayment;
-
-  // ================= REPORT =================
-  function generateReport(){
-    const year=Number(filterYear.value); const tbody=document.querySelector("#reportTable tbody"); tbody.innerHTML="";
-    if(!year){ alert("Masukkan Tahun terlebih dahulu!"); return; }
-    const paid=new Set(payments.filter(p=>Number(p.year)===year).map(p=>`${p.id}|${p.year}|${p.month}`));
-    members.forEach(m=>{
-      let html=`<td>${m.id}</td><td>${m.name}</td><td>${m.address}</td><td>${m.phone}</td><td>${year}</td>`;
-      for(let i=1;i<=12;i++){
-        const checked=paid.has(`${m.id}|${year}|${i}`)?"checked":"";
-        html+=`<td class='center'><input type='checkbox' ${checked} disabled></td>`;
+    // =================== FORM MEMBER ===================
+    document.getElementById("memberForm").addEventListener("submit", async function(e){
+      e.preventDefault();
+      const data = {
+        id: document.getElementById("memberID").value.trim(),
+        name: document.getElementById("memberName").value,
+        address: document.getElementById("memberAddress").value,
+        phone: document.getElementById("memberPhone").value
+      };
+      try {
+        const docRef = await addDoc(collection(db, "members"), data);
+        console.log("✅ Member berhasil disimpan:", docRef.id, data);
+        alert("Member berhasil disimpan!");
+        this.reset();
+      } catch (err) {
+        console.error("❌ Gagal simpan member:", err);
+        alert("Gagal simpan member: " + err.message);
       }
-      const tr=document.createElement("tr"); tr.innerHTML=html; tbody.appendChild(tr);
     });
-  }
-  window.generateReport = generateReport;
 
-  function exportExcel(){ const wb=XLSX.utils.table_to_book(reportTable,{sheet:"Report"}); XLSX.writeFile(wb,"Report.xlsx"); }
-  window.exportExcel = exportExcel;
+    // =================== FORM PAYMENT ===================
+    document.getElementById("paymentForm").addEventListener("submit", async function(e){
+      e.preventDefault();
+      const data = {
+        id: document.getElementById("payID").value.trim(),
+        name: document.getElementById("payName").value,
+        address: document.getElementById("payAddress").value,
+        phone: document.getElementById("payPhone").value,
+        year: parseInt(document.getElementById("payYear").value),
+        month: parseInt(document.getElementById("payMonth").value),
+        date: document.getElementById("payDate").value
+      };
+      try {
+        const docRef = await addDoc(collection(db, "payments"), data);
+        console.log("✅ Pembayaran berhasil disimpan:", docRef.id, data);
+        alert("Pembayaran berhasil disimpan!");
+        this.reset();
+      } catch (err) {
+        console.error("❌ Gagal simpan pembayaran:", err);
+        alert("Gagal simpan pembayaran: " + err.message);
+      }
+    });
 
-</script>
+    // =================== REPORT ===================
+    async function generateReport(){
+      const year = parseInt(document.getElementById("reportYear").value);
+      const membersSnap = await getDocs(collection(db,"members"));
+      const paymentsSnap = await getDocs(collection(db,"payments"));
+      const payments = {};
+      paymentsSnap.forEach(doc => {
+        const d = doc.data();
+        payments[d.id+"-"+d.year+"-"+d.month] = true;
+      });
+
+      const tbody = document.querySelector("#reportTable tbody");
+      tbody.innerHTML = "";
+      membersSnap.forEach(doc=>{
+        const m = doc.data();
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${m.id}</td><td>${m.name}</td><td>${m.address}</td><td>${m.phone}</td><td>${year}</td>
+          ${[1,2,3,4,5,6,7,8,9,10,11,12].map(mo=>"<td>"+(payments[m.id+"-"+year+"-"+mo]?"✔":"-")+"</td>").join("")}
+        `;
+        tbody.appendChild(row);
+      });
+    }
+    window.generateReport = generateReport;
+
+    // =================== TAB ===================
+    function showTab(tabId){
+      document.querySelectorAll(".tab").forEach(t=>t.style.display="none");
+      document.getElementById(tabId).style.display="block";
+    }
+    window.showTab = showTab;
+
+    // =================== LOGOUT ===================
+    function logout(){
+      signOut(auth).then(()=>{
+        alert("Logout berhasil!");
+        location.reload();
+      });
+    }
+    window.logout = logout;
+  </script>
 </body>
 </html>
