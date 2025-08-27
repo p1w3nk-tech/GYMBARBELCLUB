@@ -11,63 +11,80 @@
     table { border-collapse: collapse; width: 100%; margin-top: 10px; }
     table, th, td { border: 1px solid #ccc; }
     th, td { padding: 6px; text-align: center; }
+    #loginBox { margin: 50px auto; padding: 20px; width: 300px; background: #fff; border: 1px solid #ccc; }
+    #loginBox input { width: 100%; margin-bottom: 10px; padding: 8px; }
+    #loginBox button { width: 100%; padding: 8px; }
   </style>
 </head>
 <body>
 
   <h2>📋 Sistem Member & Pembayaran</h2>
 
-  <nav>
-    <button onclick="showTab('memberTab')">Database Member</button>
-    <button onclick="showTab('paymentTab')">Pembayaran</button>
-    <button onclick="showTab('reportTab')">Report Rekap</button>
-    <button onclick="logout()">Logout</button>
-  </nav>
-
-  <!-- =================== MEMBER =================== -->
-  <div id="memberTab" class="tab">
-    <h3>Tambah Member</h3>
-    <form id="memberForm">
-      <label>ID<br><input type="text" id="memberID" required></label><br>
-      <label>Nama<br><input type="text" id="memberName" required></label><br>
-      <label>Alamat<br><input type="text" id="memberAddress" required></label><br>
-      <label>No HP<br><input type="text" id="memberPhone" required></label><br>
-      <button type="submit">Simpan Member</button>
-    </form>
+  <!-- =================== LOGIN =================== -->
+  <div id="loginBox">
+    <h3>Login</h3>
+    <input type="email" id="loginEmail" placeholder="Email" value="admin@app.com">
+    <input type="password" id="loginPass" placeholder="Password" value="wulankwan">
+    <button onclick="login()">Login</button>
   </div>
 
-  <!-- =================== PAYMENT =================== -->
-  <div id="paymentTab" class="tab">
-    <h3>Tambah Pembayaran</h3>
-    <form id="paymentForm">
-      <label>ID Member<br><input type="text" id="payID" required></label><br>
-      <label>Nama<br><input type="text" id="payName" readonly></label><br>
-      <label>Alamat<br><input type="text" id="payAddress" readonly></label><br>
-      <label>No HP<br><input type="text" id="payPhone" readonly></label><br>
-      <label>Tahun<br><input type="number" id="payYear" required></label><br>
-      <label>Bulan<br><input type="number" id="payMonth" min="1" max="12" required></label><br>
-      <label>Tanggal Bayar<br><input type="date" id="payDate" required></label><br>
-      <button type="submit">Simpan Pembayaran</button>
-    </form>
-  </div>
+  <!-- =================== MAIN CONTENT =================== -->
+  <div id="mainContent" style="display:none;">
+    <nav>
+      <button onclick="showTab('memberTab')">Database Member</button>
+      <button onclick="showTab('paymentTab')">Pembayaran</button>
+      <button onclick="showTab('reportTab')">Report Rekap</button>
+      <button onclick="logout()">Logout</button>
+    </nav>
 
-  <!-- =================== REPORT =================== -->
-  <div id="reportTab" class="tab">
-    <h3>Report Rekap (Matrix Jan–Des)</h3>
-    <label>Tahun <input type="number" id="reportYear" value="2025"></label>
-    <button onclick="generateReport()">Tampilkan</button>
-    <button onclick="exportExcel()">Export Excel</button>
-    <button onclick="window.print()">Print</button>
-    <table id="reportTable">
-      <thead>
-        <tr>
-          <th>ID</th><th>Nama</th><th>Alamat</th><th>No HP</th><th>Tahun</th>
-          <th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>Mei</th><th>Jun</th>
-          <th>Jul</th><th>Agu</th><th>Sep</th><th>Okt</th><th>Nov</th><th>Des</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <!-- =================== MEMBER =================== -->
+    <div id="memberTab" class="tab">
+      <h3>Tambah Member</h3>
+      <form id="memberForm">
+        <label>ID<br><input type="text" id="memberID" required></label><br>
+        <label>Nama<br><input type="text" id="memberName" required></label><br>
+        <label>Alamat<br><input type="text" id="memberAddress" required></label><br>
+        <label>No HP<br><input type="text" id="memberPhone" required></label><br>
+        <button type="submit">Simpan Member</button>
+      </form>
+    </div>
+
+    <!-- =================== PAYMENT =================== -->
+    <div id="paymentTab" class="tab">
+      <h3>Tambah Pembayaran</h3>
+      <form id="paymentForm">
+        <label>ID Member<br>
+          <input list="memberList" id="payID" required>
+          <datalist id="memberList"></datalist>
+        </label><br>
+        <label>Nama<br><input type="text" id="payName" readonly></label><br>
+        <label>Alamat<br><input type="text" id="payAddress" readonly></label><br>
+        <label>No HP<br><input type="text" id="payPhone" readonly></label><br>
+        <label>Tahun<br><input type="number" id="payYear" required></label><br>
+        <label>Bulan<br><input type="number" id="payMonth" min="1" max="12" required></label><br>
+        <label>Tanggal Bayar<br><input type="date" id="payDate" required></label><br>
+        <button type="submit">Simpan Pembayaran</button>
+      </form>
+    </div>
+
+    <!-- =================== REPORT =================== -->
+    <div id="reportTab" class="tab">
+      <h3>Report Rekap (Matrix Jan–Des)</h3>
+      <label>Tahun <input type="number" id="reportYear" value="2025"></label>
+      <button onclick="generateReport()">Tampilkan</button>
+      <button onclick="exportExcel()">Export Excel</button>
+      <button onclick="window.print()">Print</button>
+      <table id="reportTable">
+        <thead>
+          <tr>
+            <th>ID</th><th>Nama</th><th>Alamat</th><th>No HP</th><th>Tahun</th>
+            <th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>Mei</th><th>Jun</th>
+            <th>Jul</th><th>Agu</th><th>Sep</th><th>Okt</th><th>Nov</th><th>Des</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- =================== FIREBASE =================== -->
@@ -79,17 +96,34 @@
     // ✅ Ganti dengan config project Firebase Anda
 		const firebaseConfig = {
 		apiKey: "AIzaSyCSKjBcT_oc7Lc991ZQehtrZku0r8ocvE8",
-	authDomain: "coba-8f9af.firebaseapp.com",
-	projectId: "coba-8f9af",
-	storageBucket: "coba-8f9af.firebasestorage.app",
-	messagingSenderId: "375276847460",
-	appId: "1:375276847460:web:f1df0de167aa1612cc7a71",
-	measurementId: "G-97Y1D758BR"
-	};
+		authDomain: "coba-8f9af.firebaseapp.com",
+		projectId: "coba-8f9af",
+		storageBucket: "coba-8f9af.firebasestorage.app",
+		messagingSenderId: "375276847460",
+		appId: "1:375276847460:web:f1df0de167aa1612cc7a71",
+		measurementId: "G-97Y1D758BR"
+		};
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+
+    // =================== LOGIN ===================
+    async function login(){
+      const email = document.getElementById("loginEmail").value;
+      const pass = document.getElementById("loginPass").value;
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        alert("✅ Login berhasil!");
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("mainContent").style.display = "block";
+        showTab("memberTab");
+        loadMemberList();
+      } catch(err){
+        alert("❌ Login gagal: " + err.message);
+      }
+    }
+    window.login = login;
 
     // =================== FORM MEMBER ===================
     document.getElementById("memberForm").addEventListener("submit", async function(e){
@@ -102,12 +136,43 @@
       };
       try {
         const docRef = await addDoc(collection(db, "members"), data);
-        console.log("✅ Member berhasil disimpan:", docRef.id, data);
+        console.log("✅ Member disimpan:", docRef.id, data);
         alert("Member berhasil disimpan!");
         this.reset();
+        loadMemberList();
       } catch (err) {
-        console.error("❌ Gagal simpan member:", err);
-        alert("Gagal simpan member: " + err.message);
+        alert("❌ Gagal simpan member: " + err.message);
+      }
+    });
+
+    // =================== AUTO FILL PAYMENT ===================
+    async function loadMemberList(){
+      const membersSnap = await getDocs(collection(db, "members"));
+      const list = document.getElementById("memberList");
+      list.innerHTML = "";
+      membersSnap.forEach(docSnap=>{
+        const m = docSnap.data();
+        const option = document.createElement("option");
+        option.value = m.id;
+        list.appendChild(option);
+      });
+    }
+
+    document.getElementById("payID").addEventListener("change", async function(){
+      const id = this.value.trim();
+      if(!id) return;
+      const membersSnap = await getDocs(collection(db, "members"));
+      let found = null;
+      membersSnap.forEach(docSnap=>{
+        const m = docSnap.data();
+        if(m.id === id){ found = m; }
+      });
+      if(found){
+        document.getElementById("payName").value = found.name;
+        document.getElementById("payAddress").value = found.address;
+        document.getElementById("payPhone").value = found.phone;
+      } else {
+        alert("❌ Member ID tidak ditemukan!");
       }
     });
 
@@ -125,12 +190,11 @@
       };
       try {
         const docRef = await addDoc(collection(db, "payments"), data);
-        console.log("✅ Pembayaran berhasil disimpan:", docRef.id, data);
+        console.log("✅ Pembayaran disimpan:", docRef.id, data);
         alert("Pembayaran berhasil disimpan!");
         this.reset();
       } catch (err) {
-        console.error("❌ Gagal simpan pembayaran:", err);
-        alert("Gagal simpan pembayaran: " + err.message);
+        alert("❌ Gagal simpan pembayaran: " + err.message);
       }
     });
 
@@ -159,14 +223,13 @@
     }
     window.generateReport = generateReport;
 
-    // =================== TAB ===================
+    // =================== TAB & LOGOUT ===================
     function showTab(tabId){
       document.querySelectorAll(".tab").forEach(t=>t.style.display="none");
       document.getElementById(tabId).style.display="block";
     }
     window.showTab = showTab;
 
-    // =================== LOGOUT ===================
     function logout(){
       signOut(auth).then(()=>{
         alert("Logout berhasil!");
