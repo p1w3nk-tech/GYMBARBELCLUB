@@ -115,8 +115,6 @@
     from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
   import { getAuth, signInWithEmailAndPassword, signOut } 
     from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-
-  // Konfigurasi Firebase project Anda
   const firebaseConfig = {
     apiKey: "AIzaSyCSKjBcT_oc7Lc991ZQehtrZku0r8ocvE8",
     authDomain: "coba-8f9af.firebaseapp.com",
@@ -137,24 +135,25 @@
 
   // ================= LOGIN =================
   async function loginFirebase(){
-  const email = document.getElementById("username").value.trim();
-  const pass = document.getElementById("password").value.trim();
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-    const user = userCredential.user;
-    
-    // Cek apakah email = admin
-    isAdmin = (user.email === "admin@gmail.com");
+    const email = document.getElementById("username").value.trim();
+    const pass = document.getElementById("password").value.trim();
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+      const user = userCredential.user;
 
-    alert("Login Firebase berhasil sebagai " + (isAdmin ? "Admin" : "User"));
-    document.getElementById("loginBox").style.display = "none";
-    document.getElementById("menu").style.display = "flex";
-    applyRole();
-    showTab("tab-report");
-    loadMembers();
-    loadPayments();
-  } catch (e) {
-    alert("Login gagal: " + e.message);
+      // cek apakah admin
+      isAdmin = (user.email === "admin@gmail.com");
+
+      alert("Login berhasil sebagai " + (isAdmin ? "Admin" : "User"));
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("menu").style.display = "flex";
+      applyRole();
+      showTab("tab-report");
+      loadMembers();
+      loadPayments();
+    } catch (e) {
+      alert("Login gagal: " + e.message);
+    }
   }
   window.loginFirebase = loginFirebase;
 
@@ -168,19 +167,18 @@
   window.logoutFirebase = logoutFirebase;
 
   function applyRole(){
-  if (isAdmin) {
-    // Kalau admin → tampilkan semua menu
-    document.getElementById("menu").style.display = "flex";
-    document.querySelectorAll(".adminOnly").forEach(el=>{
-      el.style.display = "";
-    });
-  } else {
-    // Kalau bukan admin → hanya tampilkan tab report
-    document.getElementById("menu").style.display = "flex";
-    document.querySelectorAll(".adminOnly").forEach(el=>{
-      el.style.display = "none";
-    });
-    showTab("tab-report");
+    if (isAdmin) {
+      // Admin: semua menu tampil
+      document.querySelectorAll(".adminOnly").forEach(el=>{
+        el.style.display = "";
+      });
+    } else {
+      // User: hanya report
+      document.querySelectorAll(".adminOnly").forEach(el=>{
+        el.style.display = "none";
+      });
+      showTab("tab-report");
+    }
   }
 
   function showTab(id){
@@ -237,6 +235,7 @@
         <button onclick="deleteMember(${i})">Hapus</button></td>`;
       tbody.appendChild(tr);
     });
+    applyRole();
   }
 
   function renderPayments(){
@@ -250,6 +249,7 @@
       <button onclick="deletePaymentById('${p.id}',${p.year},${p.month})">Hapus</button></td>`;
       tbody.appendChild(tr);
     });
+    applyRole();
   }
 
   // ================= FORM HANDLER =================
