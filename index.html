@@ -31,9 +31,9 @@
   <!-- =================== MAIN CONTENT =================== -->
   <div id="mainContent" style="display:none;">
     <nav>
-      <button onclick="showTab('memberTab')">Database Member</button>
-      <button onclick="showTab('paymentTab')">Pembayaran</button>
-      <button onclick="showTab('reportTab')">Report Rekap</button>
+      <button id="btnMember" onclick="showTab('memberTab')">Database Member</button>
+      <button id="btnPayment" onclick="showTab('paymentTab')">Pembayaran</button>
+      <button id="btnReport" onclick="showTab('reportTab')">Report Rekap</button>
       <button onclick="logout()">Logout</button>
     </nav>
 
@@ -93,34 +93,55 @@
     import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-    // ✅ Ganti dengan config project Firebase Anda
-		const firebaseConfig = {
-		apiKey: "AIzaSyCSKjBcT_oc7Lc991ZQehtrZku0r8ocvE8",
-		authDomain: "coba-8f9af.firebaseapp.com",
-		projectId: "coba-8f9af",
-		storageBucket: "coba-8f9af.firebasestorage.app",
-		messagingSenderId: "375276847460",
-		appId: "1:375276847460:web:f1df0de167aa1612cc7a71",
-		measurementId: "G-97Y1D758BR"
-		};
+    // ✅ Config Firebase
+    const firebaseConfig = {
+  apiKey: "AIzaSyCSKjBcT_oc7Lc991ZQehtrZku0r8ocvE8",
+  authDomain: "coba-8f9af.firebaseapp.com",
+  projectId: "coba-8f9af",
+  storageBucket: "coba-8f9af.firebasestorage.app",
+  messagingSenderId: "375276847460",
+  appId: "1:375276847460:web:f1df0de167aa1612cc7a71",
+  measurementId: "G-97Y1D758BR"
+};
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+
+    const adminEmail = "admin@app.com"; // akun admin
 
     // =================== LOGIN ===================
     async function login(){
       const email = document.getElementById("loginEmail").value;
       const pass = document.getElementById("loginPass").value;
       try {
-        await signInWithEmailAndPassword(auth, email, pass);
-        alert("✅ Login berhasil!");
+        const userCred = await signInWithEmailAndPassword(auth, email, pass);
+        const user = userCred.user;
+
         document.getElementById("loginBox").style.display = "none";
         document.getElementById("mainContent").style.display = "block";
-        showTab("memberTab");
-        loadMemberList();
+
+        if(user.email === adminEmail){
+          alert("✅ Login sebagai Admin");
+          document.getElementById("btnMember").style.display = "inline-block";
+          document.getElementById("btnPayment").style.display = "inline-block";
+          showTab("memberTab");
+          loadMemberList();
+        } else {
+          alert("ℹ️ Login sebagai User biasa (Report saja)");
+          document.getElementById("btnMember").style.display = "none";
+          document.getElementById("btnPayment").style.display = "none";
+          showTab("reportTab");
+        }
+
       } catch(err){
-        alert("❌ Login gagal: " + err.message);
+        // gagal login → guest (Report saja)
+        alert("❌ Login gagal, masuk sebagai Guest (Report saja)");
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("mainContent").style.display = "block";
+        document.getElementById("btnMember").style.display = "none";
+        document.getElementById("btnPayment").style.display = "none";
+        showTab("reportTab");
       }
     }
     window.login = login;
@@ -136,8 +157,7 @@
       };
       try {
         const docRef = await addDoc(collection(db, "members"), data);
-        console.log("✅ Member disimpan:", docRef.id, data);
-        alert("Member berhasil disimpan!");
+        alert("✅ Member berhasil disimpan!");
         this.reset();
         loadMemberList();
       } catch (err) {
@@ -189,9 +209,8 @@
         date: document.getElementById("payDate").value
       };
       try {
-        const docRef = await addDoc(collection(db, "payments"), data);
-        console.log("✅ Pembayaran disimpan:", docRef.id, data);
-        alert("Pembayaran berhasil disimpan!");
+        await addDoc(collection(db, "payments"), data);
+        alert("✅ Pembayaran berhasil disimpan!");
         this.reset();
       } catch (err) {
         alert("❌ Gagal simpan pembayaran: " + err.message);
