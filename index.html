@@ -5,8 +5,7 @@
   <title>Sistem Member & Pembayaran</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
-    h2 { margin-bottom: 10px; }
-    nav button { margin: 5px; padding: 10px; }
+    nav button { margin: 5px; padding: 8px 12px; }
     .tab { display: none; margin-top: 20px; }
     table { border-collapse: collapse; width: 100%; margin-top: 10px; }
     table, th, td { border: 1px solid #ccc; }
@@ -17,7 +16,6 @@
   </style>
 </head>
 <body>
-
   <h2>📋 Sistem Member & Pembayaran</h2>
 
   <!-- =================== LOGIN =================== -->
@@ -39,20 +37,27 @@
 
     <!-- =================== MEMBER =================== -->
     <div id="memberTab" class="tab">
-      <h3>Tambah Member</h3>
+      <h3>Tambah / Edit Member</h3>
       <form id="memberForm">
+        <input type="hidden" id="memberDocId">
         <label>ID<br><input type="text" id="memberID" required></label><br>
         <label>Nama<br><input type="text" id="memberName" required></label><br>
         <label>Alamat<br><input type="text" id="memberAddress" required></label><br>
         <label>No HP<br><input type="text" id="memberPhone" required></label><br>
-        <button type="submit">Simpan Member</button>
+        <button type="submit">Simpan</button>
       </form>
+      <h4>Daftar Member</h4>
+      <table id="memberTable">
+        <thead><tr><th>ID</th><th>Nama</th><th>Alamat</th><th>HP</th><th>Aksi</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
 
     <!-- =================== PAYMENT =================== -->
     <div id="paymentTab" class="tab">
-      <h3>Tambah Pembayaran</h3>
+      <h3>Tambah / Edit Pembayaran</h3>
       <form id="paymentForm">
+        <input type="hidden" id="paymentDocId">
         <label>ID Member<br>
           <input list="memberList" id="payID" required>
           <datalist id="memberList"></datalist>
@@ -63,8 +68,13 @@
         <label>Tahun<br><input type="number" id="payYear" required></label><br>
         <label>Bulan<br><input type="number" id="payMonth" min="1" max="12" required></label><br>
         <label>Tanggal Bayar<br><input type="date" id="payDate" required></label><br>
-        <button type="submit">Simpan Pembayaran</button>
+        <button type="submit">Simpan</button>
       </form>
+      <h4>Daftar Pembayaran</h4>
+      <table id="paymentTable">
+        <thead><tr><th>ID</th><th>Nama</th><th>Tahun</th><th>Bulan</th><th>Tanggal</th><th>Aksi</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
 
     <!-- =================== REPORT =================== -->
@@ -72,7 +82,6 @@
       <h3>Report Rekap (Matrix Jan–Des)</h3>
       <label>Tahun <input type="number" id="reportYear" value="2025"></label>
       <button onclick="generateReport()">Tampilkan</button>
-      <button onclick="exportExcel()">Export Excel</button>
       <button onclick="window.print()">Print</button>
       <table id="reportTable">
         <thead>
@@ -90,19 +99,19 @@
   <!-- =================== FIREBASE =================== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-    // ✅ Config Firebase
+    // 🔑 Firebase Config
     const firebaseConfig = {
-  apiKey: "AIzaSyCSKjBcT_oc7Lc991ZQehtrZku0r8ocvE8",
-  authDomain: "coba-8f9af.firebaseapp.com",
-  projectId: "coba-8f9af",
-  storageBucket: "coba-8f9af.appspot.com",
-  messagingSenderId: "375276847460",
-  appId: "1:375276847460:web:f1df0de167aa1612cc7a71",
-  measurementId: "G-97Y1D758BR"
-};
+      apiKey: "AIzaSyCSKjBcT_oc7Lc991ZQehtrZku0r8ocvE8",
+      authDomain: "coba-8f9af.firebaseapp.com",
+      projectId: "coba-8f9af",
+      storageBucket: "coba-8f9af.appspot.com",   // ✅ diperbaiki
+      messagingSenderId: "375276847460",
+      appId: "1:375276847460:web:f1df0de167aa1612cc7a71",
+      measurementId: "G-97Y1D758BR"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -112,8 +121,8 @@
 
     // =================== LOGIN ===================
     async function login(){
-      const email = document.getElementById("loginEmail").value;
-      const pass = document.getElementById("loginPass").value;
+      const email = document.getElementById("loginEmail").value.trim();
+      const pass = document.getElementById("loginPass").value.trim();
       try {
         const userCred = await signInWithEmailAndPassword(auth, email, pass);
         const user = userCred.user;
@@ -121,21 +130,24 @@
         document.getElementById("loginBox").style.display = "none";
         document.getElementById("mainContent").style.display = "block";
 
-        if(user.email === adminEmail){
+        // 🔑 cek email admin pakai lowercase
+        if (user.email.toLowerCase() === adminEmail.toLowerCase()) {
           alert("✅ Login sebagai Admin");
           document.getElementById("btnMember").style.display = "inline-block";
           document.getElementById("btnPayment").style.display = "inline-block";
           showTab("memberTab");
+          loadMembers();
+          loadPayments();
           loadMemberList();
         } else {
-          alert("ℹ️ Login sebagai User biasa (Report saja)");
+          alert("ℹ️ Login berhasil tapi bukan admin → hanya Report");
           document.getElementById("btnMember").style.display = "none";
           document.getElementById("btnPayment").style.display = "none";
           showTab("reportTab");
         }
 
       } catch(err){
-        // gagal login → guest (Report saja)
+        // === LOGIN GAGAL ===
         alert("❌ Login gagal, masuk sebagai Guest (Report saja)");
         document.getElementById("loginBox").style.display = "none";
         document.getElementById("mainContent").style.display = "block";
@@ -146,23 +158,63 @@
     }
     window.login = login;
 
-    // =================== FORM MEMBER ===================
+    // =================== CRUD MEMBER ===================
+    async function loadMembers(){
+      const membersSnap = await getDocs(collection(db, "members"));
+      const tbody = document.querySelector("#memberTable tbody");
+      tbody.innerHTML = "";
+      membersSnap.forEach(docSnap=>{
+        const m = docSnap.data();
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${m.id}</td>
+          <td>${m.name}</td>
+          <td>${m.address}</td>
+          <td>${m.phone}</td>
+          <td>
+            <button onclick="editMember('${docSnap.id}','${m.id}','${m.name}','${m.address}','${m.phone}')">Edit</button>
+            <button onclick="deleteMember('${docSnap.id}')">Hapus</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+    window.loadMembers = loadMembers;
+
+    async function editMember(docId,id,name,address,phone){
+      document.getElementById("memberDocId").value = docId;
+      document.getElementById("memberID").value = id;
+      document.getElementById("memberName").value = name;
+      document.getElementById("memberAddress").value = address;
+      document.getElementById("memberPhone").value = phone;
+    }
+    window.editMember = editMember;
+
+    async function deleteMember(docId){
+      if(confirm("Yakin hapus member ini?")){
+        await deleteDoc(doc(db,"members",docId));
+        loadMembers();
+      }
+    }
+    window.deleteMember = deleteMember;
+
     document.getElementById("memberForm").addEventListener("submit", async function(e){
       e.preventDefault();
+      const docId = document.getElementById("memberDocId").value;
       const data = {
         id: document.getElementById("memberID").value.trim(),
         name: document.getElementById("memberName").value,
         address: document.getElementById("memberAddress").value,
         phone: document.getElementById("memberPhone").value
       };
-      try {
-        const docRef = await addDoc(collection(db, "members"), data);
-        alert("✅ Member berhasil disimpan!");
-        this.reset();
-        loadMemberList();
-      } catch (err) {
-        alert("❌ Gagal simpan member: " + err.message);
+      if(docId){
+        await updateDoc(doc(db,"members",docId),data);
+      } else {
+        await addDoc(collection(db,"members"),data);
       }
+      this.reset();
+      document.getElementById("memberDocId").value = "";
+      loadMembers();
+      loadMemberList();
     });
 
     // =================== AUTO FILL PAYMENT ===================
@@ -196,9 +248,52 @@
       }
     });
 
-    // =================== FORM PAYMENT ===================
+    // =================== CRUD PAYMENT ===================
+    async function loadPayments(){
+      const paymentsSnap = await getDocs(collection(db, "payments"));
+      const tbody = document.querySelector("#paymentTable tbody");
+      tbody.innerHTML = "";
+      paymentsSnap.forEach(docSnap=>{
+        const p = docSnap.data();
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.id}</td>
+          <td>${p.name}</td>
+          <td>${p.year}</td>
+          <td>${p.month}</td>
+          <td>${p.date}</td>
+          <td>
+            <button onclick="editPayment('${docSnap.id}','${p.id}','${p.name}','${p.address}','${p.phone}',${p.year},${p.month},'${p.date}')">Edit</button>
+            <button onclick="deletePayment('${docSnap.id}')">Hapus</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+    window.loadPayments = loadPayments;
+
+    async function editPayment(docId,id,name,address,phone,year,month,date){
+      document.getElementById("paymentDocId").value = docId;
+      document.getElementById("payID").value = id;
+      document.getElementById("payName").value = name;
+      document.getElementById("payAddress").value = address;
+      document.getElementById("payPhone").value = phone;
+      document.getElementById("payYear").value = year;
+      document.getElementById("payMonth").value = month;
+      document.getElementById("payDate").value = date;
+    }
+    window.editPayment = editPayment;
+
+    async function deletePayment(docId){
+      if(confirm("Yakin hapus pembayaran ini?")){
+        await deleteDoc(doc(db,"payments",docId));
+        loadPayments();
+      }
+    }
+    window.deletePayment = deletePayment;
+
     document.getElementById("paymentForm").addEventListener("submit", async function(e){
       e.preventDefault();
+      const docId = document.getElementById("paymentDocId").value;
       const data = {
         id: document.getElementById("payID").value.trim(),
         name: document.getElementById("payName").value,
@@ -208,13 +303,14 @@
         month: parseInt(document.getElementById("payMonth").value),
         date: document.getElementById("payDate").value
       };
-      try {
-        await addDoc(collection(db, "payments"), data);
-        alert("✅ Pembayaran berhasil disimpan!");
-        this.reset();
-      } catch (err) {
-        alert("❌ Gagal simpan pembayaran: " + err.message);
+      if(docId){
+        await updateDoc(doc(db,"payments",docId),data);
+      } else {
+        await addDoc(collection(db,"payments"),data);
       }
+      this.reset();
+      document.getElementById("paymentDocId").value = "";
+      loadPayments();
     });
 
     // =================== REPORT ===================
@@ -251,7 +347,6 @@
 
     function logout(){
       signOut(auth).then(()=>{
-        alert("Logout berhasil!");
         location.reload();
       });
     }
