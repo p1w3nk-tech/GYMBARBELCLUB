@@ -115,7 +115,8 @@
     from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
   import { getAuth, signInWithEmailAndPassword, signOut } 
     from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-	
+
+  // 🔹 Ganti config di bawah dengan yang asli dari Firebase Console
   const firebaseConfig = {
   apiKey: "AIzaSyCSKjBcT_oc7Lc991ZQehtrZku0r8ocvE8",
   authDomain: "coba-8f9af.firebaseapp.com",
@@ -124,7 +125,7 @@
   messagingSenderId: "375276847460",
   appId: "1:375276847460:web:f1df0de167aa1612cc7a71",
   measurementId: "G-97Y1D758BR"
-};
+	};
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
@@ -143,7 +144,7 @@
       const user = userCredential.user;
 
       // cek apakah admin
-      isAdmin = (user.email === "admin@gmail.com");
+      isAdmin = (user.email === "admin@app.com");
 
       alert("Login berhasil sebagai " + (isAdmin ? "Admin" : "User"));
       document.getElementById("loginBox").style.display = "none";
@@ -170,14 +171,10 @@
   function applyRole(){
     if (isAdmin) {
       // Admin: semua menu tampil
-      document.querySelectorAll(".adminOnly").forEach(el=>{
-        el.style.display = "";
-      });
+      document.querySelectorAll(".adminOnly").forEach(el=>{ el.style.display = ""; });
     } else {
       // User: hanya report
-      document.querySelectorAll(".adminOnly").forEach(el=>{
-        el.style.display = "none";
-      });
+      document.querySelectorAll(".adminOnly").forEach(el=>{ el.style.display = "none"; });
       showTab("tab-report");
     }
   }
