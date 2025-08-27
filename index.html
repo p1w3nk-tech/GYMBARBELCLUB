@@ -120,40 +120,42 @@
 
     // =================== LOGIN ===================
     async function login(){
-      const email = document.getElementById("loginEmail").value;
-      const pass = document.getElementById("loginPass").value;
-      try {
-        const userCred = await signInWithEmailAndPassword(auth, email, pass);
-        const user = userCred.user;
+  const email = document.getElementById("loginEmail").value;
+  const pass = document.getElementById("loginPass").value;
+  try {
+    const userCred = await signInWithEmailAndPassword(auth, email, pass);
+    const user = userCred.user;
 
-        document.getElementById("loginBox").style.display = "none";
-        document.getElementById("mainContent").style.display = "block";
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("mainContent").style.display = "block";
 
-        if(user.email === adminEmail){
-          alert("✅ Login sebagai Admin");
-          document.getElementById("btnMember").style.display = "inline-block";
-          document.getElementById("btnPayment").style.display = "inline-block";
-          showTab("memberTab");
-          loadMembers();
-          loadPayments();
-          loadMemberList();
-        } else {
-          alert("ℹ️ Login sebagai User biasa (Report saja)");
-          document.getElementById("btnMember").style.display = "none";
-          document.getElementById("btnPayment").style.display = "none";
-          showTab("reportTab");
-        }
-
-      } catch(err){
-        // gagal login → guest (Report saja)
-        alert("❌ Login gagal, masuk sebagai Guest (Report saja)");
-        document.getElementById("loginBox").style.display = "none";
-        document.getElementById("mainContent").style.display = "block";
-        document.getElementById("btnMember").style.display = "none";
-        document.getElementById("btnPayment").style.display = "none";
-        showTab("reportTab");
-      }
+    if(user.email === adminEmail){
+      // === ADMIN ===
+      alert("✅ Login sebagai Admin");
+      document.getElementById("btnMember").style.display = "inline-block";
+      document.getElementById("btnPayment").style.display = "inline-block";
+      showTab("memberTab");
+      loadMembers();
+      loadPayments();
+      loadMemberList();
+    } else {
+      // === BUKAN ADMIN ===
+      alert("ℹ️ Login berhasil tapi bukan admin → hanya Report");
+      document.getElementById("btnMember").style.display = "none";
+      document.getElementById("btnPayment").style.display = "none";
+      showTab("reportTab");
     }
+
+  } catch(err){
+    // === LOGIN GAGAL ===
+    alert("❌ Login gagal, masuk sebagai Guest (Report saja)");
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("mainContent").style.display = "block";
+    document.getElementById("btnMember").style.display = "none";
+    document.getElementById("btnPayment").style.display = "none";
+    showTab("reportTab");
+  }
+}
     window.login = login;
 
     // =================== MEMBER CRUD ===================
