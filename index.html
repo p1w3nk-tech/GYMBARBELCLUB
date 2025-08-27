@@ -137,21 +137,24 @@
 
   // ================= LOGIN =================
   async function loginFirebase(){
-    const email = document.getElementById("username").value.trim();
-    const pass = document.getElementById("password").value.trim();
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-      alert("Login Firebase berhasil sebagai Admin");
-      isAdmin = true;
-      document.getElementById("loginBox").style.display = "none";
-      document.getElementById("menu").style.display = "flex";
-      applyRole();
-      showTab("tab-report");
-      loadMembers();
-      loadPayments();
-    } catch (e) {
-      alert("Login gagal: " + e.message);
-    }
+  const email = document.getElementById("username").value.trim();
+  const pass = document.getElementById("password").value.trim();
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+    const user = userCredential.user;
+    
+    // Cek apakah email = admin
+    isAdmin = (user.email === "admin@gmail.com");
+
+    alert("Login Firebase berhasil sebagai " + (isAdmin ? "Admin" : "User"));
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("menu").style.display = "flex";
+    applyRole();
+    showTab("tab-report");
+    loadMembers();
+    loadPayments();
+  } catch (e) {
+    alert("Login gagal: " + e.message);
   }
   window.loginFirebase = loginFirebase;
 
@@ -165,9 +168,19 @@
   window.logoutFirebase = logoutFirebase;
 
   function applyRole(){
+  if (isAdmin) {
+    // Kalau admin → tampilkan semua menu
+    document.getElementById("menu").style.display = "flex";
     document.querySelectorAll(".adminOnly").forEach(el=>{
-      el.style.display = isAdmin ? "" : "none";
+      el.style.display = "";
     });
+  } else {
+    // Kalau bukan admin → hanya tampilkan tab report
+    document.getElementById("menu").style.display = "flex";
+    document.querySelectorAll(".adminOnly").forEach(el=>{
+      el.style.display = "none";
+    });
+    showTab("tab-report");
   }
 
   function showTab(id){
