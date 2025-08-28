@@ -1,18 +1,22 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Sistem Member & Pembayaran</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
     nav button { margin: 5px; padding: 8px 12px; }
     .tab { display: none; margin-top: 20px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; background: #fff; }
     table, th, td { border: 1px solid #ccc; }
     th, td { padding: 6px; text-align: center; }
-    #loginBox { margin: 50px auto; padding: 20px; width: 300px; background: #fff; border: 1px solid #ccc; }
+    #loginBox { margin: 50px auto; padding: 20px; width: 320px; background: #fff; border: 1px solid #ccc; border-radius: 8px; }
     #loginBox input { width: 100%; margin-bottom: 10px; padding: 8px; }
     #loginBox button { width: 100%; padding: 8px; }
+    #pagination { display:flex; align-items:center; gap:8px; flex-wrap: wrap; }
+    #pagination button[disabled]{ opacity: .5; cursor: not-allowed; }
+    .toolbar { display:flex; align-items:center; gap:10px; flex-wrap: wrap; margin:8px 0; }
   </style>
 </head>
 <body>
@@ -21,8 +25,8 @@
   <!-- =================== LOGIN =================== -->
   <div id="loginBox">
     <h3>Login</h3>
-    <input type="email" id="loginEmail" placeholder="Email">
-    <input type="password" id="loginPass" placeholder="Password">
+    <input type="email" id="loginEmail" placeholder="Email" />
+    <input type="password" id="loginPass" placeholder="Password" />
     <button onclick="login()">Login</button>
   </div>
 
@@ -39,11 +43,11 @@
     <div id="memberTab" class="tab">
       <h3>Tambah / Edit Member</h3>
       <form id="memberForm">
-        <input type="hidden" id="memberDocId">
-        <label>ID<br><input type="text" id="memberID" required></label><br>
-        <label>Nama<br><input type="text" id="memberName" required></label><br>
-        <label>Alamat<br><input type="text" id="memberAddress" required></label><br>
-        <label>No HP<br><input type="text" id="memberPhone" required></label><br>
+        <input type="hidden" id="memberDocId" />
+        <label>ID<br /><input type="text" id="memberID" required /></label><br />
+        <label>Nama<br /><input type="text" id="memberName" required /></label><br />
+        <label>Alamat<br /><input type="text" id="memberAddress" required /></label><br />
+        <label>No HP<br /><input type="text" id="memberPhone" required /></label><br />
         <button type="submit">Simpan</button>
       </form>
       <h4>Daftar Member</h4>
@@ -57,17 +61,17 @@
     <div id="paymentTab" class="tab">
       <h3>Tambah / Edit Pembayaran</h3>
       <form id="paymentForm">
-        <input type="hidden" id="paymentDocId">
-        <label>ID Member<br>
-          <input list="memberList" id="payID" required>
+        <input type="hidden" id="paymentDocId" />
+        <label>ID Member<br />
+          <input list="memberList" id="payID" required />
           <datalist id="memberList"></datalist>
-        </label><br>
-        <label>Nama<br><input type="text" id="payName" readonly></label><br>
-        <label>Alamat<br><input type="text" id="payAddress" readonly></label><br>
-        <label>No HP<br><input type="text" id="payPhone" readonly></label><br>
-        <label>Tahun<br><input type="number" id="payYear" required></label><br>
-        <label>Bulan<br><input type="number" id="payMonth" min="1" max="12" required></label><br>
-        <label>Tanggal Bayar<br><input type="date" id="payDate" required></label><br>
+        </label><br />
+        <label>Nama<br /><input type="text" id="payName" readonly /></label><br />
+        <label>Alamat<br /><input type="text" id="payAddress" readonly /></label><br />
+        <label>No HP<br /><input type="text" id="payPhone" readonly /></label><br />
+        <label>Tahun<br /><input type="number" id="payYear" required /></label><br />
+        <label>Bulan<br /><input type="number" id="payMonth" min="1" max="12" required /></label><br />
+        <label>Tanggal Bayar<br /><input type="date" id="payDate" required /></label><br />
         <button type="submit">Simpan</button>
       </form>
       <h4>Daftar Pembayaran</h4>
@@ -80,10 +84,12 @@
     <!-- =================== REPORT =================== -->
     <div id="reportTab" class="tab">
       <h3>Report Rekap (Matrix Jan–Des)</h3>
-      <label>Tahun <input type="number" id="reportYear" value="2025"></label>
-      <button onclick="generateReport()">Tampilkan</button>
-      <button onclick="window.print()">Print</button>
-      <input type="text" id="searchReport" placeholder="Cari Nama..." style="margin-left:10px;">
+      <div class="toolbar">
+        <label>Tahun <input type="number" id="reportYear" value="2025" /></label>
+        <button onclick="generateReport()">Tampilkan</button>
+        <button onclick="window.print()">Print</button>
+        <input type="text" id="searchReport" placeholder="Cari Nama..." />
+      </div>
       <table id="reportTable">
         <thead>
           <tr>
@@ -166,14 +172,15 @@
       membersSnap.forEach(docSnap=>{
         members.push({docId: docSnap.id, ...docSnap.data()});
       });
-      members.sort((a,b)=> a.id.localeCompare(b.id)); // urut ID
+      // Urut ID (natural / numerik jika ada angka)
+      members.sort((a,b)=> a.id?.toString().localeCompare(b.id?.toString(), undefined, { numeric: true, sensitivity: 'base' }));
       members.forEach(m=>{
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${m.id}</td>
-          <td>${m.name}</td>
-          <td>${m.address}</td>
-          <td>${m.phone}</td>
+          <td>${m.id || ''}</td>
+          <td>${m.name || ''}</td>
+          <td>${m.address || ''}</td>
+          <td>${m.phone || ''}</td>
           <td>
             <button onclick="editMember('${m.docId}','${m.id}','${m.name}','${m.address}','${m.phone}')">Edit</button>
             <button onclick="deleteMember('${m.docId}')">Hapus</button>
@@ -185,10 +192,10 @@
 
     async function editMember(docId,id,name,address,phone){
       document.getElementById("memberDocId").value = docId;
-      document.getElementById("memberID").value = id;
-      document.getElementById("memberName").value = name;
-      document.getElementById("memberAddress").value = address;
-      document.getElementById("memberPhone").value = phone;
+      document.getElementById("memberID").value = id || '';
+      document.getElementById("memberName").value = name || '';
+      document.getElementById("memberAddress").value = address || '';
+      document.getElementById("memberPhone").value = phone || '';
     }
     window.editMember = editMember;
 
@@ -225,10 +232,15 @@
       const membersSnap = await getDocs(collection(db, "members"));
       const list = document.getElementById("memberList");
       list.innerHTML = "";
+      const opts = [];
       membersSnap.forEach(docSnap=>{
         const m = docSnap.data();
+        if (m && m.id) opts.push(m.id.toString());
+      });
+      opts.sort((a,b)=> a.localeCompare(b, undefined, { numeric:true, sensitivity:'base' }));
+      opts.forEach(v=>{
         const option = document.createElement("option");
-        option.value = m.id;
+        option.value = v;
         list.appendChild(option);
       });
     }
@@ -240,12 +252,12 @@
       let found = null;
       membersSnap.forEach(docSnap=>{
         const m = docSnap.data();
-        if(m.id === id){ found = m; }
+        if(m.id?.toString() === id){ found = m; }
       });
       if(found){
-        document.getElementById("payName").value = found.name;
-        document.getElementById("payAddress").value = found.address;
-        document.getElementById("payPhone").value = found.phone;
+        document.getElementById("payName").value = found.name || '';
+        document.getElementById("payAddress").value = found.address || '';
+        document.getElementById("payPhone").value = found.phone || '';
       } else {
         alert("❌ Member ID tidak ditemukan!");
       }
@@ -260,15 +272,15 @@
       paymentsSnap.forEach(docSnap=>{
         payments.push({docId: docSnap.id, ...docSnap.data()});
       });
-      payments.sort((a,b)=> a.id.localeCompare(b.id)); // urut ID
+      payments.sort((a,b)=> a.id?.toString().localeCompare(b.id?.toString(), undefined, { numeric:true, sensitivity:'base' }));
       payments.forEach(p=>{
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${p.id}</td>
-          <td>${p.name}</td>
-          <td>${p.year}</td>
-          <td>${p.month}</td>
-          <td>${p.date}</td>
+          <td>${p.id || ''}</td>
+          <td>${p.name || ''}</td>
+          <td>${p.year || ''}</td>
+          <td>${p.month || ''}</td>
+          <td>${p.date || ''}</td>
           <td>
             <button onclick="editPayment('${p.docId}','${p.id}','${p.name}','${p.address}','${p.phone}',${p.year},${p.month},'${p.date}')">Edit</button>
             <button onclick="deletePayment('${p.docId}')">Hapus</button>
@@ -280,13 +292,13 @@
 
     async function editPayment(docId,id,name,address,phone,year,month,date){
       document.getElementById("paymentDocId").value = docId;
-      document.getElementById("payID").value = id;
-      document.getElementById("payName").value = name;
-      document.getElementById("payAddress").value = address;
-      document.getElementById("payPhone").value = phone;
-      document.getElementById("payYear").value = year;
-      document.getElementById("payMonth").value = month;
-      document.getElementById("payDate").value = date;
+      document.getElementById("payID").value = id || '';
+      document.getElementById("payName").value = name || '';
+      document.getElementById("payAddress").value = address || '';
+      document.getElementById("payPhone").value = phone || '';
+      document.getElementById("payYear").value = year || '';
+      document.getElementById("payMonth").value = month || '';
+      document.getElementById("payDate").value = date || '';
     }
     window.editPayment = editPayment;
 
@@ -320,20 +332,25 @@
       loadPayments();
     });
 
-    // =================== REPORT ===================
-    let reportData = [];
+    // =================== REPORT + SEARCH + PAGINATION ===================
+    let reportData = []; // array objek {id,name,address,phone,year,payments:[bulan]}
     let currentPage = 1;
     const rowsPerPage = 20; // ✅ 20 baris per halaman
+
+    function getFilteredReport(){
+      const keyword = (document.getElementById("searchReport").value || "").toLowerCase();
+      return reportData.filter(r => (r.name || "").toLowerCase().includes(keyword));
+    }
 
     function renderReportTable(){
       const tbody = document.querySelector("#reportTable tbody");
       tbody.innerHTML = "";
 
-      const keyword = document.getElementById("searchReport").value.toLowerCase();
-      const filtered = reportData.filter(r => r.name.toLowerCase().includes(keyword));
+      const filtered = getFilteredReport();
+      const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
+      if(currentPage > totalPages) currentPage = totalPages; // jaga batas atas
+      if(currentPage < 1) currentPage = 1;                    // jaga batas bawah
 
-      const totalPages = Math.ceil(filtered.length / rowsPerPage);
-      if(currentPage > totalPages) currentPage = totalPages || 1;
       const start = (currentPage-1) * rowsPerPage;
       const end = start + rowsPerPage;
       const pageData = filtered.slice(start,end);
@@ -347,19 +364,36 @@
         tbody.appendChild(row);
       });
 
-      document.getElementById("pagination").innerHTML =
-        `Halaman ${currentPage} / ${totalPages || 1} 
-         <button onclick="changePage(-1)">◀</button> 
-         <button onclick="changePage(1)">▶</button>`;
+      const isFirst = currentPage === 1;
+      const isLast = currentPage === totalPages;
+      const pagEl = document.getElementById("pagination");
+      pagEl.innerHTML = `
+        <span>Total ${filtered.length} data — Halaman ${currentPage} / ${totalPages}</span>
+        <button onclick="goFirst()" ${isFirst?"disabled":""}>⏮ First</button>
+        <button onclick="changePage(-1)" ${isFirst?"disabled":""}>◀ Prev</button>
+        <button onclick="changePage(1)" ${isLast?"disabled":""}>Next ▶</button>
+        <button onclick="goLast()" ${isLast?"disabled":""}>Last ⏭</button>
+      `;
     }
 
     function changePage(dir){
-      currentPage += dir;
+      const filtered = getFilteredReport();
+      const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
+      currentPage = Math.min(totalPages, Math.max(1, currentPage + dir));
       renderReportTable();
     }
+    window.changePage = changePage;
+
+    function goFirst(){ currentPage = 1; renderReportTable(); }
+    function goLast(){
+      const totalPages = Math.max(1, Math.ceil(getFilteredReport().length / rowsPerPage));
+      currentPage = totalPages; renderReportTable();
+    }
+    window.goFirst = goFirst;
+    window.goLast  = goLast;
 
     document.getElementById("searchReport").addEventListener("input",()=>{
-      currentPage=1;
+      currentPage=1; // reset ke halaman 1 saat mencari
       renderReportTable();
     });
 
@@ -367,25 +401,30 @@
       const year = parseInt(document.getElementById("reportYear").value);
       const membersSnap = await getDocs(collection(db,"members"));
       const paymentsSnap = await getDocs(collection(db,"payments"));
-      const payments = {};
-      paymentsSnap.forEach(doc => {
-        const d = doc.data();
-        payments[d.id+"-"+d.year+"-"+d.month] = true;
+
+      const paid = {}; // key: id-year-month => true
+      paymentsSnap.forEach(d => {
+        const v = d.data();
+        if(!v || v.id==null || v.year==null || v.month==null) return;
+        paid[`${v.id}-${v.year}-${v.month}`] = true;
       });
 
       reportData = [];
       membersSnap.forEach(doc=>{
         const m = doc.data();
+        if(!m) return;
+        const idStr = m.id?.toString() || "";
         reportData.push({
-          id: m.id,
-          name: m.name,
-          address: m.address,
-          phone: m.phone,
+          id: idStr,
+          name: m.name || "",
+          address: m.address || "",
+          phone: m.phone || "",
           year: year,
-          payments: [1,2,3,4,5,6,7,8,9,10,11,12].filter(mo => payments[m.id+"-"+year+"-"+mo])
+          payments: [1,2,3,4,5,6,7,8,9,10,11,12].filter(mo => paid[`${idStr}-${year}-${mo}`])
         });
       });
-      reportData.sort((a,b)=> a.id.localeCompare(b.id));
+      // Urutkan berdasarkan ID (natural)
+      reportData.sort((a,b)=> a.id.localeCompare(b.id, undefined, { numeric:true, sensitivity:'base' }));
       currentPage=1;
       renderReportTable();
     }
@@ -394,7 +433,11 @@
     // =================== TAB & LOGOUT ===================
     function showTab(tabId){
       document.querySelectorAll(".tab").forEach(t=>t.style.display="none");
-      document.getElementById(tabId).style.display="block";
+      document.getElementById(tabId).style.display = "block"; // ✅ perbaikan baris yang sempat terpotong
+      // Auto-generate report saat buka tab report untuk pertama kali
+      if (tabId === 'reportTab' && reportData.length === 0) {
+        generateReport();
+      }
     }
     window.showTab = showTab;
 
