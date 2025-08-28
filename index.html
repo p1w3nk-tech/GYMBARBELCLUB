@@ -83,6 +83,7 @@
       <label>Tahun <input type="number" id="reportYear" value="2025"></label>
       <button onclick="generateReport()">Tampilkan</button>
       <button onclick="window.print()">Print</button>
+      <input type="text" id="searchReport" placeholder="Cari Nama..." style="margin-left:10px;">
       <table id="reportTable">
         <thead>
           <tr>
@@ -93,6 +94,7 @@
         </thead>
         <tbody></tbody>
       </table>
+      <div id="pagination" style="margin-top:10px;"></div>
     </div>
   </div>
 
@@ -107,7 +109,7 @@
       apiKey: "AIzaSyCSKjBcT_oc7Lc991ZQehtrZku0r8ocvE8",
       authDomain: "coba-8f9af.firebaseapp.com",
       projectId: "coba-8f9af",
-      storageBucket: "coba-8f9af.appspot.com",   // ✅ diperbaiki
+      storageBucket: "coba-8f9af.appspot.com",
       messagingSenderId: "375276847460",
       appId: "1:375276847460:web:f1df0de167aa1612cc7a71",
       measurementId: "G-97Y1D758BR"
@@ -130,7 +132,6 @@
         document.getElementById("loginBox").style.display = "none";
         document.getElementById("mainContent").style.display = "block";
 
-        // 🔑 cek email admin pakai lowercase
         if (user.email.toLowerCase() === adminEmail.toLowerCase()) {
           alert("✅ Login sebagai Admin");
           document.getElementById("btnMember").style.display = "inline-block";
@@ -145,9 +146,7 @@
           document.getElementById("btnPayment").style.display = "none";
           showTab("reportTab");
         }
-
       } catch(err){
-        // === LOGIN GAGAL ===
         alert("❌ Login gagal, masuk sebagai Guest (Report saja)");
         document.getElementById("loginBox").style.display = "none";
         document.getElementById("mainContent").style.display = "block";
@@ -164,24 +163,23 @@
       const tbody = document.querySelector("#memberTable tbody");
       tbody.innerHTML = "";
       let members = [];
-membersSnap.forEach(docSnap=>{
-  members.push({docId: docSnap.id, ...docSnap.data()});
-});
-members.sort((a,b)=> a.id.localeCompare(b.id)); // urut berdasar ID
-
-members.forEach(m=>{
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td>${m.id}</td>
-    <td>${m.name}</td>
-    <td>${m.address}</td>
-    <td>${m.phone}</td>
-    <td>
-      <button onclick="editMember('${m.docId}','${m.id}','${m.name}','${m.address}','${m.phone}')">Edit</button>
-      <button onclick="deleteMember('${m.docId}')">Hapus</button>
-    </td>`;
-  tbody.appendChild(tr);
-});
+      membersSnap.forEach(docSnap=>{
+        members.push({docId: docSnap.id, ...docSnap.data()});
+      });
+      members.sort((a,b)=> a.id.localeCompare(b.id)); // urut ID
+      members.forEach(m=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${m.id}</td>
+          <td>${m.name}</td>
+          <td>${m.address}</td>
+          <td>${m.phone}</td>
+          <td>
+            <button onclick="editMember('${m.docId}','${m.id}','${m.name}','${m.address}','${m.phone}')">Edit</button>
+            <button onclick="deleteMember('${m.docId}')">Hapus</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
     }
     window.loadMembers = loadMembers;
 
@@ -259,25 +257,24 @@ members.forEach(m=>{
       const tbody = document.querySelector("#paymentTable tbody");
       tbody.innerHTML = "";
       let payments = [];
-paymentsSnap.forEach(docSnap=>{
-  payments.push({docId: docSnap.id, ...docSnap.data()});
-});
-payments.sort((a,b)=> a.id.localeCompare(b.id)); // urut berdasar ID
-
-payments.forEach(p=>{
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td>${p.id}</td>
-    <td>${p.name}</td>
-    <td>${p.year}</td>
-    <td>${p.month}</td>
-    <td>${p.date}</td>
-    <td>
-      <button onclick="editPayment('${p.docId}','${p.id}','${p.name}','${p.address}','${p.phone}',${p.year},${p.month},'${p.date}')">Edit</button>
-      <button onclick="deletePayment('${p.docId}')">Hapus</button>
-    </td>`;
-  tbody.appendChild(tr);
-});
+      paymentsSnap.forEach(docSnap=>{
+        payments.push({docId: docSnap.id, ...docSnap.data()});
+      });
+      payments.sort((a,b)=> a.id.localeCompare(b.id)); // urut ID
+      payments.forEach(p=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.id}</td>
+          <td>${p.name}</td>
+          <td>${p.year}</td>
+          <td>${p.month}</td>
+          <td>${p.date}</td>
+          <td>
+            <button onclick="editPayment('${p.docId}','${p.id}','${p.name}','${p.address}','${p.phone}',${p.year},${p.month},'${p.date}')">Edit</button>
+            <button onclick="deletePayment('${p.docId}')">Hapus</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
     }
     window.loadPayments = loadPayments;
 
@@ -324,6 +321,48 @@ payments.forEach(p=>{
     });
 
     // =================== REPORT ===================
+    let reportData = [];
+    let currentPage = 1;
+    const rowsPerPage = 20; // ✅ 20 baris per halaman
+
+    function renderReportTable(){
+      const tbody = document.querySelector("#reportTable tbody");
+      tbody.innerHTML = "";
+
+      const keyword = document.getElementById("searchReport").value.toLowerCase();
+      const filtered = reportData.filter(r => r.name.toLowerCase().includes(keyword));
+
+      const totalPages = Math.ceil(filtered.length / rowsPerPage);
+      if(currentPage > totalPages) currentPage = totalPages || 1;
+      const start = (currentPage-1) * rowsPerPage;
+      const end = start + rowsPerPage;
+      const pageData = filtered.slice(start,end);
+
+      pageData.forEach(r=>{
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${r.id}</td><td>${r.name}</td><td>${r.address}</td><td>${r.phone}</td><td>${r.year}</td>
+          ${[1,2,3,4,5,6,7,8,9,10,11,12].map(mo=>"<td>"+(r.payments.includes(mo)?"✔":"-")+"</td>").join("")}
+        `;
+        tbody.appendChild(row);
+      });
+
+      document.getElementById("pagination").innerHTML =
+        `Halaman ${currentPage} / ${totalPages || 1} 
+         <button onclick="changePage(-1)">◀</button> 
+         <button onclick="changePage(1)">▶</button>`;
+    }
+
+    function changePage(dir){
+      currentPage += dir;
+      renderReportTable();
+    }
+
+    document.getElementById("searchReport").addEventListener("input",()=>{
+      currentPage=1;
+      renderReportTable();
+    });
+
     async function generateReport(){
       const year = parseInt(document.getElementById("reportYear").value);
       const membersSnap = await getDocs(collection(db,"members"));
@@ -334,22 +373,21 @@ payments.forEach(p=>{
         payments[d.id+"-"+d.year+"-"+d.month] = true;
       });
 
-      const tbody = document.querySelector("#reportTable tbody");
-      tbody.innerHTML = "";
-      let members = [];
-membersSnap.forEach(doc=>{
-  members.push(doc.data());
-});
-members.sort((a,b)=> a.id.localeCompare(b.id)); // urut ID
-
-members.forEach(m=>{
-  const row = document.createElement("tr");
-  row.innerHTML = `
-    <td>${m.id}</td><td>${m.name}</td><td>${m.address}</td><td>${m.phone}</td><td>${year}</td>
-    ${[1,2,3,4,5,6,7,8,9,10,11,12].map(mo=>"<td>"+(payments[m.id+"-"+year+"-"+mo]?"✔":"-")+"</td>").join("")}
-  `;
-  tbody.appendChild(row);
-});
+      reportData = [];
+      membersSnap.forEach(doc=>{
+        const m = doc.data();
+        reportData.push({
+          id: m.id,
+          name: m.name,
+          address: m.address,
+          phone: m.phone,
+          year: year,
+          payments: [1,2,3,4,5,6,7,8,9,10,11,12].filter(mo => payments[m.id+"-"+year+"-"+mo])
+        });
+      });
+      reportData.sort((a,b)=> a.id.localeCompare(b.id));
+      currentPage=1;
+      renderReportTable();
     }
     window.generateReport = generateReport;
 
@@ -361,9 +399,7 @@ members.forEach(m=>{
     window.showTab = showTab;
 
     function logout(){
-      signOut(auth).then(()=>{
-        location.reload();
-      });
+      signOut(auth).then(()=>{ location.reload(); });
     }
     window.logout = logout;
   </script>
